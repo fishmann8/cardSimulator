@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <link rel="icon" href="https://i2.hdslb.com/bfs/face/d399d6f5cf7943a996ae96999ba3e6ae2a2988de.jpg">
+    <meta name="referrer" content="no-referrer">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cardSimulator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- 视频预加载 -->
+    <link rel="preload" as="video" href="./紫3-9.mp4">
+    <link rel="preload" as="video" href="./金2-8_1.mp4">
+    <script>
+        // 删除选人数组中重复出现的数字
+        function norepeat(val, arry) {
+            for (x in arry) {
+                if (arry[x] == val) {
+                    arry.splice(x, 1);
+                    return arry;
+                }
+            }
+
+        }
+        function sleep(time) {
+            return new Promise((resolve) => setTimeout(resolve, time));
+        }
+        function stopDefault(event) {
+            //阻止默认浏览器动作(W3C) 
+            if (event && event.preventDefault)
+                event.preventDefault();
+            //IE中阻止函数器默认动作的方式 
+            else
+                window.event.returnValue = false;
+            return false;
+        }
+        function checkClass(obj, cn) {
+            var reg = new RegExp("\\b" + cn + "\\b");
+            return reg.test(obj.className);
+        }
+
+        function addClassme(obj, cn) {
+            if (!checkClass(obj, cn)) obj.className += " " + cn;
+        }
+
+        function removeClassme(obj, cn) {
+            var reg = new RegExp("\\b" + cn + "\\b");
+            obj.className = obj.className.replace(reg, "")
+        }
+
+        function changeClass(obj, cn) {
+            if (checkClass(obj, cn)) removeClassme(obj, cn);
+            else addClassme(obj, cn);
+        }
+        function getStyle(obj, name) {
+            if (window.getComputedStyle) return getComputedStyle(obj, null)[name];
+            else return obj.currentStyle[name];
+        }
+        function moveAct(obj, left, target, speed, callback) {
+            clearInterval(obj.timer);
+            if (parseInt(getStyle(obj, left)) > target) speed = -speed;
+            var weight = window.innerWidth / 1920;
+            speed = speed * weight;
+            target = target * weight;
+            obj.timer = setInterval(() => {
+                var oldValue = parseInt(getStyle(obj, left)) * weight;
+                var newValue = oldValue + speed;
+                if ((newValue > target && speed > 0) || (newValue < target && speed < 0)) newValue = target;
+                obj.style[left] = newValue + 'px';
+                if (newValue == target) {
+                    clearInterval(obj.timer);
+                    callback && callback();
+                }
+            }, 5 * 1920 / window.innerWidth);
+        }
+        var get4_2 = [];
+
+        $(function () {
+
+
+            // get4_1记录选人流水数字
+            // get4_2记录出现在choose中的数字
+            var i = 0;
+            var j = 0;
+            // 阻止动画快速执行多次
+            var flag = true;
+            // 五星共一个
+            var flag1 = true;
+            // 四星共三个
+            var flag2 = true;
+
+            var c = 0;
+            var get4_1 = [];
+            var get4 = [];
+            $(".name").on("click", "div", function () {
+                if (flag1) {
+                    flag1 = false;
+                    clearTimeout(timer1);
+                    if (i < 4 && (flag || $(this).prop("class") == "sixing") && (c < 3 || $(this).prop("class") == "wuxing")) {
+                        get4_1[i] = $(this).hide(650).index()
+                        $(this).parent(".name").siblings(".choose").children().eq(get4_1[i]).show(650)
+                        i = i + 1
+                        j = j + 1
+                        get4_2[j - 1] = get4_1[i - 1]
+                        console.log(get4_1)
+                        // console.log(get4_2.slice(-4))
+                        if ($(".name").children().eq(get4_1[i - 1]).prop("class") == "wuxing") flag = false;
+                        else c++;
+                        var timer1 = setTimeout(function () {
+                            flag1 = true;
+                        }, 700);
+                    }
+                    else flag1 = true;
+                }
+            })
+            $(".choose").on("click", "div", function () {
+                if (flag2) {
+                    flag2 = false;
+                    clearTimeout(timer2);
+                    get4[i] = $(this).hide(650).index()
+                    $(this).parent(".choose").siblings(".name").children().eq(get4[i]).show(650)
+                    get4_2 = norepeat(get4[i], get4_2);
+                    j = j - 1
+                    i = i - 1
+                    // console.log(get4_2.slice(-4))
+                    if ($(".name").children().eq(get4[i + 1]).prop("class") == "wuxing") flag = true;
+                    else c--;
+                    var timer2 = setTimeout(function () {
+                        flag2 = true;
+                    }, 700);
+                }
+            })
+
+
+
+        })
+        //count4记录4星抽数 count5记录5星抽数 sum记录总抽数 _4记录4星总获得数 _5记录5星总获得数 
+        // makeUP概率补偿 want5，4_1-3选人记录 ，g3-5记录一次抽卡循环中的角色获得，g4-5Wrong保底记录
+        var makeUp = 60;
+        var want5 = 11;
+        var want4_1 = 1;
+        var want4_2 = 2;
+        var want4_3 = 3;
+        var count4 = 0, count5 = 0, sum = 0, _4 = 0, _5 = 0, count4_3 = 0;
+        var random = 0, g3 = 0, g4 = 0, g5 = 0, makeUp = 60, random2 = 0, random3 = 0,
+            g4Wrong = 0, g5Wrong = 0, random4 = 0, random5 = 0, random6 = 0, random8 = 0;
+        window.onload = function () {
+            var showss = document.querySelectorAll(".cardwrapper>div>img");
+            var donghua = document.querySelector(".donghua");
+            var shipin = document.querySelector("#shipin");
+            // window.getSelection().empty();
+            var recordinform = document.querySelector(".recordinform");
+            var father = document.querySelector(".recordwrapper ul");
+            var cardbackground = document.querySelector(".cardwrapper");
+            var cardbackground_div1 = document.querySelector(".cardwrapper div");
+            var cardbackground_divs = document.querySelectorAll(".cardwrapper div");
+            var showcard = document.querySelector(".showcard");
+            var names = document.querySelectorAll(".name div");
+            var name1 = document.querySelector(".name");
+            var timedh4, timedh3, timedh5;
+            var tiaoguoaudio = new Audio("./跳过.mp3");
+            var choukaaudio = new Audio("./抽卡.mp3");
+            var fanhuiaudio = new Audio("./返回.mp3");
+            var btn03 = document.querySelector(".btn03");
+            var novoice = document.querySelector('#checkboxOneInput2');
+            var notips = document.querySelector('#checkboxOneInput1');
+            var totools = document.querySelector('.totools');
+            var totips = document.querySelector('.totips');
+            var back4 = document.querySelector('.back4');
+            var toleft = document.querySelector('.toleft');
+            var toright = document.querySelector('.toright');
+            var ops = document.querySelectorAll('.ops');
+            var tips1 = document.querySelector('.tips1');
+            var tips2 = document.querySelector('.tips2');
+            var tips3 = document.querySelector('.tips3');
+            var tools = document.querySelector('.tools');
+            var tips = document.querySelector('.tips');
+            var img1 = document.querySelector(".img1")
+            var img2 = document.querySelector(".img2")
+            var img3 = document.querySelector(".img3")
+            // 记录tips中的箭头位置
+            var leftflag = 0;
+            var btn04 = document.querySelector(".btn04")
+            var quxiao = document.querySelector('.quxiao');
+            var quedinwrapper = document.querySelector('.quedinwrapper');
+            var tipswrapper = document.querySelector('.tipswrapper');
+            var jieshao1 = document.querySelector('.jieshao1');
+            var jieshao2 = document.querySelector('.jieshao2');
+            // 记录用户设置
+            var tipsval = true;
+            var voiceval = true;
+            var totipswrapper = document.querySelector(".totipswrapper");
+
+
+            window.backgroundcard = ["https://i0.hdslb.com/bfs/album/1fe7a19928214af1063bcd5abef6782ebeb2704d.jpg", "https://i0.hdslb.com/bfs/album/0cb6a98ad757dc8ecf102f96e7f5ff77c4670e7b.jpg", "https://i0.hdslb.com/bfs/album/74a0494aacdedd9818f5fa942a823cee84044fe6.jpg"];
+            window.donghuaname = ["1背景.jpg", "共开始.jpg", "白爆.jpg", "白开.jpg", "白坠.jpg", "白闪.jpg", "紫爆.jpg", "紫开.jpg", "紫坠.jpg", "紫闪.jpg", "金爆.jpg", "金开.jpg", "金坠.jpg", "金闪.jpg", "结束背景.jpg"]
+            window.donghuaimgs = [{ "id": "04f396eb-654f-492d-9c73-75aeb0f9cd4a", "name": "共开始.jpg", "url": "https://i0.hdslb.com/bfs/album/b361c46238a4c43f09969ba207cbb4b34b309bbd.jpg", "width": 1920, "height": 1080, "date": 1634958638009 }, { "id": "2dae2964-6e21-41b1-b924-52d5f67b4069", "name": "紫爆.jpg", "url": "https://i0.hdslb.com/bfs/album/a2634218f6d9fc2eab720b50879c179efbbad165.jpg", "width": 1920, "height": 1080, "date": 1634958637961 }, { "id": "3b78e3cd-282c-45a0-8586-a32dd28133fb", "name": "金闪.jpg", "url": "https://i0.hdslb.com/bfs/album/755ce54ab3d7d278d59ae8e62e93985c72812aea.jpg", "width": 1920, "height": 1080, "date": 1634958637844 }, { "id": "3caa126f-0185-4a26-8abc-81c2d87facbd", "name": "金爆.jpg", "url": "https://i0.hdslb.com/bfs/album/ce01132530ca1e7d954014aaf81e4ce1897d1378.jpg", "width": 1920, "height": 1080, "date": 1634958637961 }, { "id": "601bc3ec-af23-4a8b-ad0b-bfe534934c66", "name": "紫坠.jpg", "url": "https://i0.hdslb.com/bfs/album/19116c90de92251b17ef7e5fa56897ff7ed0b51d.jpg", "width": 1920, "height": 1080, "date": 1634958637948 }, { "id": "77733174-0fa9-4693-9505-48a906085f94", "name": "白开.jpg", "url": "https://i0.hdslb.com/bfs/album/157cd79924357008dc14ba07e6e903a48437bd2c.jpg", "width": 1920, "height": 1080, "date": 1634958637961 }, { "id": "7a749687-1411-4ee9-b798-49ae09c72b6f", "name": "结束背景.jpg", "url": "https://i0.hdslb.com/bfs/album/b9f232a036914799eeec1d8e3b7ddbd88c4fdc50.jpg", "width": 800, "height": 450, "date": 1634958637555 }, { "id": "807cf46d-b533-4fa6-9e14-75e761ba8f07", "name": "金开.jpg", "url": "https://i0.hdslb.com/bfs/album/192fd525d7cd14c691237b9072ebac8aefd5f0c0.jpg", "width": 1920, "height": 1080, "date": 1634958637961 }, { "id": "80f7e55d-0fbf-4fb6-9fd5-21852609fa52", "name": "白坠.jpg", "url": "https://i0.hdslb.com/bfs/album/3b945bd5d4e230527f92525fa019f0888d3f8898.jpg", "width": 1920, "height": 1080, "date": 1634958637948 }, { "id": "8e1ffe36-b418-4e53-ba73-6d0083a524b9", "name": "白爆.jpg", "url": "https://i0.hdslb.com/bfs/album/10f69c9a14ad943931eda3ece65435e3de09409f.jpg", "width": 1920, "height": 1080, "date": 1634958637962 }, { "id": "ced88294-1295-489b-a20f-3c04f041cbfb", "name": "1背景.jpg", "url": "https://i0.hdslb.com/bfs/album/1fe7a19928214af1063bcd5abef6782ebeb2704d.jpg", "width": 1920, "height": 1080, "date": 1634958926469 }, { "id": "e08b7811-8e08-4233-855a-ddb2e57ccf0a", "name": "紫闪.jpg", "url": "https://i0.hdslb.com/bfs/album/70f465dd124aee2348c157102524796bd4748751.jpg", "width": 1920, "height": 1080, "date": 1634958637948 }, { "id": "e422f9bf-913a-46c3-95ef-047559d0e146", "name": "紫开.jpg", "url": "https://i0.hdslb.com/bfs/album/039184b4fb5b1904e495593d6aac4e64d6ac1307.jpg", "width": 1920, "height": 1080, "date": 1634958638009 }, { "id": "f9142614-5c46-49ad-9051-dcb89618cf09", "name": "金坠.jpg", "url": "https://i0.hdslb.com/bfs/album/fa2428b5c5893ce170eb69882e7f2443dc3b3abe.jpg", "width": 1920, "height": 1080, "date": 1634958637961 }, { "id": "fe4bb9f0-2f1e-48bb-9daf-ca239f135354", "name": "白闪.jpg", "url": "https://i0.hdslb.com/bfs/album/0c31dc12d2fa50081c335461e6551e8b763ea2f4.jpg", "width": 1920, "height": 1080, "date": 1634958637918 }];
+
+
+            if (localStorage.getItem("cardlist") == null) {
+                cardlist = [{
+                    id: -1,
+                    makeUp: 60,
+                    want5: 11,
+                    want4_1: 1,
+                    want4_2: 2,
+                    want4_3: 3,
+                    count4: 0,
+                    count5: 0,
+                    sum: 0,
+                    _4: 0,
+                    _5: 0,
+                    g4Wrong: 0,
+                    g5Wrong: 0,
+                    count4_3: 0,
+                    voiceval: true,
+                    tipsval: true
+                }];
+                localStorage.setItem("cardlist", JSON.stringify(cardlist));
+                id = 0;
+            }
+            else {
+                var cardlist;
+                cardlist = JSON.parse(localStorage.getItem("cardlist"));
+                makeUp = cardlist[0].makeUp;
+                want5 = cardlist[0].want5;
+                want4_1 = cardlist[0].want4_1;
+                want4_2 = cardlist[0].want4_2;
+                want4_3 = cardlist[0].want4_3;
+                count4 = cardlist[0].count4;
+                count5 = cardlist[0].count5;
+                sum = cardlist[0].sum;
+                _4 = cardlist[0]._4;
+                _5 = cardlist[0]._5;
+                g4Wrong = cardlist[0].g4Wrong;
+                g5Wrong = cardlist[0].g5Wrong;
+                count4_3 = cardlist[0].count4_3;
+                voiceval = cardlist[0].voiceval;
+                tipsval = cardlist[0].tipsval;
+                id = cardlist.length;
+                for (var index = 1; index < cardlist.length; index++) {
+                    var newwusi = document.createElement("span");
+                    newwusi.innerHTML = cardlist[index].name;
+                    newwusi.style.color = cardlist[index].color;
+
+                    showcard.appendChild(newwusi);
+                }
+                if (cardlist[0].id != -1) {
+                    var newwusi = document.createElement("span");
+                    newwusi.innerHTML = "[以上为历史信息] ";
+                    newwusi.style.color = "#9f9f9f";
+                    showcard.appendChild(newwusi);
+                }
+                if (tipsval == false) {
+                    addClassme(tipswrapper, "hiden")
+                    notips.checked = true;
+                }
+                else {
+                    removeClassme(tipswrapper, "hiden")
+                }
+
+                if (voiceval == false) {
+                    tiaoguoaudio = new Audio("./无声.mp3")
+                    choukaaudio = new Audio("./无声.mp3")
+                    fanhuiaudio = new Audio("./无声.mp3")
+                    novoice.checked = true;
+                }
+
+                var jinshu = document.querySelector(".jinshu");
+                var jingaiall = document.querySelector(".jingaiall");
+                var jinsum = document.querySelector(".jinsum");
+                var leiji = document.querySelector(".leiji");
+
+                var cardsum = document.querySelector(".cardsum");
+                cardsum.innerHTML = sum;
+
+                var zishu = document.querySelector(".zishu");
+                var zigaiall = document.querySelector(".zigaiall");
+                var zisum = document.querySelector(".zisum");
+                // var totipswrapper = document.querySelector('.totipswrapper');
+                if (_5) {
+                    jinsum.innerHTML = _5;
+                    jingaiall.innerHTML = (((_5 / (sum - count5)).toFixed(4)) * 100).toFixed(2) + "%";
+                    jinshu.innerHTML = (1 / (_5 / (sum - count5))).toFixed(2);
+                    leiji.innerHTML = count5;
+
+                }
+
+                if (_4) {
+                    zisum.innerHTML = _4;
+                    zigaiall.innerHTML = (((_4 / (sum - count4)).toFixed(4)) * 100).toFixed(2) + "%";
+
+                    zishu.innerHTML = (1 / (_4 / (sum - count4))).toFixed(2);
+                    leiji.innerHTML = count5;
+
+
+                }
+            }
+            if (localStorage.getItem("cardlist") == null) {
+                cardlist = [{
+                    id: -1,
+                    makeUp: 60,
+                    want5: 11,
+                    want4_1: 1,
+                    want4_2: 2,
+                    want4_3: 3,
+                    count4: 0,
+                    count5: 0,
+                    sum: 0,
+                    _4: 0,
+                    _5: 0,
+                    g4Wrong: 0,
+                    g5Wrong: 0,
+                    count4_3: 0,
+                    voiceval: true,
+                    tipsval: true
+                }];
+                localStorage.setItem("cardlist", JSON.stringify(cardlist));
+                id = 0;
+            }
+            else {
+                var cardlist;
+                cardlist = JSON.parse(localStorage.getItem("cardlist"));
+                makeUp = cardlist[0].makeUp;
+                want5 = cardlist[0].want5;
+                want4_1 = cardlist[0].want4_1;
+                want4_2 = cardlist[0].want4_2;
+                want4_3 = cardlist[0].want4_3;
+                count4 = cardlist[0].count4;
+                count5 = cardlist[0].count5;
+                sum = cardlist[0].sum;
+                _4 = cardlist[0]._4;
+                _5 = cardlist[0]._5;
+                g4Wrong = cardlist[0].g4Wrong;
+                g5Wrong = cardlist[0].g5Wrong;
+                count4_3 = cardlist[0].count4_3;
+                voiceval = cardlist[0].voiceval;
+                tipsval = cardlist[0].tipsval;
+                id = cardlist.length;
+
+                if (tipsval == false) {
+                    addClassme(tipswrapper, "hiden")
+                    notips.checked = true;
+                }
+                else {
+                    removeClassme(tipswrapper, "hiden")
+                }
+
+                if (voiceval == false) {
+                    tiaoguoaudio = new Audio("./无声.mp3")
+                    choukaaudio = new Audio("./无声.mp3")
+                    fanhuiaudio = new Audio("./无声.mp3")
+                    novoice.checked = true;
+                }
+
+            }
+
+
+            totools.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                addClassme(tips, "hiden");
+                removeClassme(tools, "hiden");
+                addClassme(totools, "toactive");
+                removeClassme(totips, "toactive");
+                removeClassme(jieshao2, "hiden");
+                addClassme(jieshao1, "hiden")
+            };
+            totips.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                addClassme(tools, "hiden");
+                removeClassme(tips, "hiden");
+                addClassme(totips, "toactive");
+                removeClassme(totools, "toactive");
+                removeClassme(jieshao1, "hiden");
+                addClassme(jieshao2, "hiden")
+            };
+            toright.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                if (leftflag == 0) {
+                    addClassme(img1, "hiden")
+                    removeClassme(img2, "hiden")
+                    removeClassme(toleft, "hiden")
+                    addClassme(ops[1], "opactive")
+                    removeClassme(ops[0], "opactive")
+                    addClassme(tips1, "hiden")
+                    removeClassme(tips2, "hiden")
+                }
+                if (leftflag == 1) {
+                    addClassme(img2, "hiden")
+                    removeClassme(img3, "hiden")
+                    addClassme(toright, "hiden")
+                    addClassme(ops[2], "opactive")
+                    removeClassme(ops[1], "opactive")
+                    addClassme(tips2, "hiden")
+                    removeClassme(tips3, "hiden")
+                }
+                leftflag++;
+            }
+            toleft.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                if (leftflag == 1) {
+                    addClassme(img2, "hiden")
+                    removeClassme(img1, "hiden")
+                    addClassme(toleft, "hiden")
+                    addClassme(ops[0], "opactive")
+                    removeClassme(ops[1], "opactive")
+                    addClassme(tips2, "hiden")
+                    removeClassme(tips1, "hiden")
+
+                }
+                if (leftflag == 2) {
+                    addClassme(img3, "hiden")
+                    removeClassme(img2, "hiden")
+                    removeClassme(toright, "hiden")
+                    addClassme(ops[1], "opactive")
+                    removeClassme(ops[2], "opactive")
+                    addClassme(tips3, "hiden")
+                    removeClassme(tips2, "hiden")
+                }
+                leftflag--;
+            }
+            btn03.onclick = function () {
+                removeClassme(quedinwrapper, "hiden")
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+
+            }
+            novoice.onclick = function () {
+                if (novoice.checked) {
+                    cardlist[0].voiceval = false;
+                    voiceval = false;
+                    localStorage.setItem("cardlist", JSON.stringify(cardlist))
+                    tiaoguoaudio = new Audio("./无声.mp3")
+                    choukaaudio = new Audio("./无声.mp3")
+                    fanhuiaudio = new Audio("./无声.mp3")
+
+                }
+                else {
+                    cardlist[0].voiceval = true;
+                    voiceval = true;
+                    localStorage.setItem("cardlist", JSON.stringify(cardlist))
+                    tiaoguoaudio = new Audio("./跳过.mp3")
+                    choukaaudio = new Audio("./抽卡.mp3")
+                    fanhuiaudio = new Audio("./返回.mp3")
+                }
+            }
+            notips.onclick = function () {
+                if (notips.checked) {
+                    cardlist[0].tipsval = false;
+                    tipsval = false;
+                    localStorage.setItem("cardlist", JSON.stringify(cardlist))
+
+                }
+                else {
+                    cardlist[0].tipsval = true;
+                    tipsval = true;
+                    localStorage.setItem("cardlist", JSON.stringify(cardlist))
+                }
+            }
+            btn04.onclick = function () {
+                addClassme(quedinwrapper, "hiden")
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                localStorage.clear();
+                cardlist = [{
+                    id: -1,
+                    makeUp: 60,
+                    want5: 11,
+                    want4_1: 1,
+                    want4_2: 2,
+                    want4_3: 3,
+                    count4: 0,
+                    count5: 0,
+                    sum: 0,
+                    _4: 0,
+                    _5: 0,
+                    g4Wrong: 0,
+                    g5Wrong: 0,
+                    count4_3: 0,
+                    voiceval: voiceval,
+                    tipsval: tipsval
+                }];
+                localStorage.setItem("cardlist", JSON.stringify(cardlist));
+                id = 0;
+                if (tipsval == false) {
+                    addClassme(tipswrapper, "hiden")
+                    notips.checked = true;
+                }
+                else {
+                    removeClassme(tipswrapper, "hiden")
+                }
+
+                if (voiceval == false) {
+                    tiaoguoaudio = new Audio("./无声.mp3")
+                    choukaaudio = new Audio("./无声.mp3")
+                    fanhuiaudio = new Audio("./无声.mp3")
+                    novoice.checked = true;
+                }
+            }
+            quxiao.onclick = function () {
+                addClassme(quedinwrapper, "hiden")
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+            }
+            back4.onclick = function () {
+                addClassme(tipswrapper, "hiden")
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+            }
+            totipswrapper.onclick = function () {
+                removeClassme(tipswrapper, "hiden")
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+            }
+
+
+            //want4 4星编号（三位） want5 五星编号 want4_1234编号个十百的数 want4_abc编号升序排序
+            // var want4 = 123;
+            //a为用户输入的抽卡数 random1,2为随机数 g4 g5 g3记录当此抽卡的星级 makeUp为几率补偿数 gWrong判断是否歪了
+
+            // 御三家计数器
+
+            window.star4Groupicon = ["九条头像.png", "早柚头像.png", "凝光头像.png", "皇女头像.png", "班尼特头像.png", "行秋头像.png", "迪奥娜头像.png", "重云头像.png", "雷泽头像.png", "芭芭拉头像.png", "罗莎莉亚头像.png", "香菱头像.png", "北斗头像.png", "女仆头像.png", "砂糖头像.png", "辛焱头像.png", "烟绯头像.png", "五郎头像.png", "托马头像.png"];
+            star4Group = ["2九条.png", "2早柚.png", "2凝光.png", "2皇女.png", "2班尼特.png", "2行秋.png", "2迪奥娜.png", "2重云.png", "2雷泽.png", "2芭芭拉.png", "2罗莎莉亚.png", "2香菱.png", "2北斗.png", "2女仆.png", "2砂糖.png", "2辛焱.png", "2烟绯.png", "2五郎.png", "2托马.png"];
+
+            var star4GroupWrong_2 = ["2丽莎.png", "2安伯.png", "2凯亚.png"];
+            window.star5Groupicon = ["心海头像.png", "影头像.png", "宵宫头像.png", "神里头像.png", "万叶头像.png", "温迪头像.png", "胡桃头像.png", "可莉头像.png", "刻晴头像.png", "尤拉头像.png", "魈头像.png", "达达利亚头像.png", "钟离头像.png", "阿贝多头像.png", "甘雨头像.png", "一斗头像.png"];
+            var star5Group = ["1心海.png", "1影.png", "1宵宫.png", "1神里.png", "1万叶.png", "1温迪.png", "1胡桃.png", "1可莉.png", "1刻晴.png", "1尤拉.png", "1魈.png", "1达达利亚.png", "1钟离.png", "1阿贝多.png", "1甘雨.png", "1一斗.png"];
+            var star5GroupWrong = ["1刻晴.png", "1七七.png", "1迪卢克.png", "1莫娜.png", "1琴.png"];
+            window.star3_1 = ["5三星弓.png", "5三星法器.png", "5三星长柄.png", "5三星双手剑.png", "5三星单手剑.png"];
+            var star4_1 = ["4星法器.png", "4星弓.png", "4星长柄.png", "4星双手剑.png", "4星单手剑.png"];
+            window.imgs = [{ "id": "01305a60-2312-44d5-9abb-543497ddbd28", "name": "1七七.png", "url": "https://i0.hdslb.com/bfs/album/19e2ed7a67fddd78726da627d8a3cb8403849deb.png", "width": 143, "height": 612, "date": 1634737847471 },
+            { "id": "031e4c2a-396b-460f-aa2a-fcd8be4f0f59", "name": "公子.png", "url": "https://i0.hdslb.com/bfs/album/1c24d8698b58ff6207b76c5b9f994462602c196a.png", "width": 143, "height": 612, "date": 1634737847473 },
+            { "id": "09184a4b-59bb-473f-9318-bb0b1b006cf5", "name": "刻晴头像.png", "url": "https://i0.hdslb.com/bfs/album/dd51d0b1941e738ab2c56130eb99f219b5c58caa.png", "width": 208, "height": 248, "date": 1634737844093 },
+            { "id": "0b376451-0c1d-4591-82f4-5762edc3498c", "name": "魈头像.png", "url": "https://i0.hdslb.com/bfs/album/428958496ead5a88db741c934682fe1a05b5122a.png", "width": 208, "height": 248, "date": 1634737844094 },
+            { "id": "105645c1-e647-4527-b54b-b4d2a9ef2d04", "name": "丽莎头像.png", "url": "https://i0.hdslb.com/bfs/album/6419582378fc543e2f60c7d0368495b0698303ce.png", "width": 106, "height": 106, "date": 1634737839080 }, { "id": "1337693b-574e-4aa5-ba4c-c0344cc6181e", "name": "2早柚.png", "url": "https://i0.hdslb.com/bfs/album/976426ac5a0ac19cac25c4936784fce82c24fffb.png", "width": 143, "height": 612, "date": 1634737847473 }, { "id": "13e114aa-bc80-4677-ba38-21d305399e63", "name": "1影.png", "url": "https://i0.hdslb.com/bfs/album/5e001088ba676acaa0af1d459610d059edfd815b.png", "width": 143, "height": 612, "date": 1634737847474 }, { "id": "14c9e777-7c14-40f0-88fc-8ec69a851d1e", "name": "1达达利亚.png", "url": "https://i0.hdslb.com/bfs/album/8c5aa9381cc0353a3e833469363de003034ad69f.png", "width": 143, "height": 612, "date": 1634737847190 }, { "id": "19e260ea-9d3c-4b9e-b539-286d13c73326", "name": "烟绯头像.png", "url": "https://i0.hdslb.com/bfs/album/056502225383319964524383468243bdc74ae0ae.png", "width": 208, "height": 248, "date": 1634737843646 }, { "id": "1c03ec65-19ce-4d67-9ed9-d9271e23f8a0", "name": "1琴.png", "url": "https://i0.hdslb.com/bfs/album/8046acfe206afae603209502c36d51de4449557f.png", "width": 143, "height": 612, "date": 1634737847467 }, { "id": "1c15e363-f34f-4596-9b6a-d9542ff352b2", "name": "香菱头像.png", "url": "https://i0.hdslb.com/bfs/album/a3f380abfb75ed4fd2fe309af25f53ccf856a2ed.png", "width": 208, "height": 248, "date": 1634737842869 }, { "id": "1f84ad35-4479-4676-8999-851ee4d2d9a2", "name": "5三星弓.png", "url": "https://i0.hdslb.com/bfs/album/0174df4b7745c2a6c81bd7fcc33fdb17a48e3acc.png", "width": 143, "height": 612, "date": 1634737845811 }, { "id": "2207c160-a4fb-4f58-b5cf-5b72530e30ae", "name": "4星双手剑.png", "url": "https://i0.hdslb.com/bfs/album/675cf5d77bc3082bb75c148ca4ad60acaee31683.png", "width": 143, "height": 612, "date": 1634737846194 }, { "id": "2260df1f-c306-4f95-a4e8-e77c07920382", "name": "2重云.png", "url": "https://i0.hdslb.com/bfs/album/778fec7052a5c19a4aea21dedf55d26b0f15efc0.png", "width": 143, "height": 612, "date": 1634737847473 }, { "id": "23c9aa86-5645-4f5c-bea2-f209ff39e082", "name": "1迪卢克.png", "url": "https://i0.hdslb.com/bfs/album/20f473444a60c0bf864440a62232b674cc7c9914.png", "width": 143, "height": 612, "date": 1634737847468 }, { "id": "247d7e15-fb86-482c-8f1e-1cfa5afb368b", "name": "1钟离.png", "url": "https://i0.hdslb.com/bfs/album/123b0c6ad75fe2d27002080cc5900789cae7db69.png", "width": 143, "height": 612, "date": 1634737847450 }, { "id": "29ea2afe-3af7-4716-8734-38b52488a5eb", "name": "5三星单手剑.png", "url": "https://i0.hdslb.com/bfs/album/2eb709e8754794f4a410234644b4ca4ac083efc1.png", "width": 143, "height": 612, "date": 1634737845382 }, { "id": "2ecec4e1-23c9-482b-be33-1a2f5174812e", "name": "1可莉.png", "url": "https://i0.hdslb.com/bfs/album/dc068eb9e9c9ff3e479bf0bd7dc192a4097d1202.png", "width": 143, "height": 612, "date": 1634737847449 }, { "id": "2fb29c69-c172-4bdc-8044-e7c679d3227f", "name": "5三星双手剑.png", "url": "https://i0.hdslb.com/bfs/album/cf523664988a3906691fe78f1cd7419479a8b988.png", "width": 143, "height": 612, "date": 1634737845759 }, { "id": "3252a57b-bf39-4fa4-907a-1e4e3be65396", "name": "7wadw2.png", "url": "https://i0.hdslb.com/bfs/album/94136fe20c6d5742b35a2c988a5c8b2e1cafdb6f.png", "width": 64, "height": 64, "date": 1634474959359 }, { "id": "3416e247-b296-4064-a263-8c1a7a80fde1", "name": "达达利亚头像.png", "url": "https://i0.hdslb.com/bfs/album/ad7c883e141d6106136ec764a4c07ab9b16e0714.png", "width": 208, "height": 248, "date": 1634737843649 }, { "id": "3605c746-d338-436c-868d-639a541a715f", "name": "钟离头像.png", "url": "https://i0.hdslb.com/bfs/album/83c87b16c8702a072311f4ad8ad50d8413fdc4fb.png", "width": 208, "height": 248, "date": 1634737843648 }, { "id": "373f96d5-a324-44be-9c62-6ffb1c3c2aa2", "name": "2020030616591036729.png", "url": "https://i0.hdslb.com/bfs/album/b9121ca953b87cf00539dd9441f8567ccb97e124.png", "width": 106, "height": 106, "date": 1634737839080 }, { "id": "3852ec35-7583-4187-8fd8-e54531dd6fa3", "name": "w_5310_gacha.png", "url": "https://i0.hdslb.com/bfs/album/5d1271c4c39e4e40d19bb9fd2bc82c4f6efa576c.png", "width": 244, "height": 236, "date": 1634737844392 }, { "id": "4053ccee-879c-467c-beb5-b453dac19468", "name": "北斗头像.png", "url": "https://i0.hdslb.com/bfs/album/8a8fd49c42c15069e86e12835823d7efab37e76c.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "41199a16-656a-4e4b-96d4-2282af142c22", "name": "1神里.png", "url": "https://i0.hdslb.com/bfs/album/369f3bbf9762d712250a18aa239152ebac76cee1.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "45655b28-fd36-4ed7-a2b1-b003735ac0b5", "name": "image-1632921903956.png", "url": "https://i0.hdslb.com/bfs/album/6660bfd0245ed0ffc545dc858d4400f531378071.png", "width": 100, "height": 36, "date": 1632921904078 }, { "id": "4569bdc6-6b51-4181-aaf1-c76afbd67aca", "name": "5三星法器.png", "url": "https://i0.hdslb.com/bfs/album/3b71d64a9e22a29a47ed4d0edc68f4686b998687.png", "width": 143, "height": 612, "date": 1634737845811 }, { "id": "45b9ecde-b445-4cf5-b6a1-d65c4d07001f", "name": "2北斗.png", "url": "https://i0.hdslb.com/bfs/album/cb2f7977bb3ba1368326c80157ca0d9b7605ec0a.png", "width": 143, "height": 612, "date": 1634737847473 }, { "id": "47e9c8bf-75de-4938-a014-88e8b3703047", "name": "1尤拉.png", "url": "https://i0.hdslb.com/bfs/album/05b252f2106ffbad53e6dbcb6ddfe0fbae1db8ed.png", "width": 143, "height": 612, "date": 1634737847471 }, { "id": "4cea9b0c-78c1-4bc1-8f23-8df978fc1a34", "name": "1心海.png", "url": "https://i0.hdslb.com/bfs/album/bbf93ae19674832bf3d85a134fcf3ac851d74a76.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "4e0ed232-87a4-4cc5-a2f8-9621ea25030c", "name": "神里头像.png", "url": "https://i0.hdslb.com/bfs/album/66023dfb4284fc0176b5aae1ee41aaca926014a2.png", "width": 208, "height": 248, "date": 1634737842857 }, { "id": "502e5ded-d59c-48eb-8b8b-e0f6bb89d6fb", "name": "2九条.png", "url": "https://i0.hdslb.com/bfs/album/6b209f276581707999c1aabf362fc8632565a31d.png", "width": 143, "height": 612, "date": 1634737847471 }, { "id": "53f43828-519f-4248-834a-b85297405bd5", "name": "凝光头像.png", "url": "https://i0.hdslb.com/bfs/album/152aa32c8afcd96e97725b7afb5ed1bb09cf8a72.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "5713b274-dfb3-4449-9896-38a1df4aeef6", "name": "1胡桃.png", "url": "https://i0.hdslb.com/bfs/album/8a696e894fd1b98439ac546803fc083ee79f989a.png", "width": 143, "height": 612, "date": 1634737847162 }, { "id": "59083369-025c-4d30-a3b4-297b5e4db021", "name": "2芭芭拉.png", "url": "https://i0.hdslb.com/bfs/album/0d529263db5d5e5624e7c47beee01831fecbf576.png", "width": 143, "height": 612, "date": 1634737847467 }, { "id": "5b673e66-4d2b-46a3-a914-ac590183f132", "name": "凯亚头像.png", "url": "https://i0.hdslb.com/bfs/album/99bee32ed9d257e326c3fee7848bd5df7ec8754a.png", "width": 106, "height": 106, "date": 1634737838732 }, { "id": "60f896c0-08ae-4acb-8a65-17ceb044b95d", "name": "皇女头像.png", "url": "https://i0.hdslb.com/bfs/album/d3e1e319449519babb0f79ceb8772a9f3a29305a.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "62bc90fe-1964-4e92-b68c-8d8dddb39af0", "name": "1.jpg", "url": "https://i0.hdslb.com/bfs/album/6a50fb6d47f734920167694606b8cc1418ba0a7b.jpg", "width": 640, "height": 800, "date": 1634472469184 }, { "id": "62e808a3-553e-4b04-bda1-c3369ee3dfbd", "name": "雷泽头像.png", "url": "https://i0.hdslb.com/bfs/album/94af576429a7edad8d7c39ec355374e3a1805a45.png", "width": 208, "height": 248, "date": 1634737844093 }, { "id": "63b842b1-f08c-45e5-97c2-3bb8db62c56d", "name": "2香菱.png", "url": "https://i0.hdslb.com/bfs/album/b19868dbb851fd8fa910a0e3edd9f1977f388f9d.png", "width": 143, "height": 612, "date": 1634737847180 }, { "id": "65ba79f6-8656-43a9-bf00-c25ca192a307", "name": "9awd4.png", "url": "https://i0.hdslb.com/bfs/album/076d171efb003bbdfbc4b660372ac3cacb568869.png", "width": 64, "height": 64, "date": 1634474963187 }, { "id": "67a0438e-1f03-4ac7-95a2-f661771ee871", "name": "胡桃头像.png", "url": "https://i0.hdslb.com/bfs/album/2c34c57e9f77c099e240cb329ce6d9647d339095.png", "width": 208, "height": 248, "date": 1634737843649 }, { "id": "6bfc3ae7-44c1-4519-b6b1-b8e8b8965371", "name": "1宵宫.png", "url": "https://i0.hdslb.com/bfs/album/b7300f4477707b9ae6cb94e712302ed396fbf74f.png", "width": 143, "height": 612, "date": 1634737847474 }, { "id": "6e46c5ae-0d37-46af-9f67-aeada3dfe751", "name": "run透明.png", "url": "https://i0.hdslb.com/bfs/album/afc67082ef1480c2719941889d9ac158c7f0bdbd.png", "width": 798, "height": 408, "date": 1633088275169 }, { "id": "7531a2ef-b09e-4efd-a366-91363f5c992d", "name": "芭芭拉头像.png", "url": "https://i0.hdslb.com/bfs/album/7ccd68708ac63d90e2ab4bbd201da23bb93c3c0a.png", "width": 208, "height": 248, "date": 1634737844093 }, { "id": "75b80528-0841-48d5-910c-ec4d035105d4", "name": "2行秋.png", "url": "https://i0.hdslb.com/bfs/album/30f08e3afe1bb7140f9f4007b032d18f6814c441.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "779e24bf-bcc2-4b70-b566-23ddc8ad302b", "name": "行秋头像.png", "url": "https://i0.hdslb.com/bfs/album/14c3a0126895672d69c966a6b0040a49d84614ea.png", "width": 208, "height": 248, "date": 1634737843649 }, { "id": "7ba85e33-7876-4b98-a343-b61578148e7a", "name": "安伯头像.png", "url": "https://i0.hdslb.com/bfs/album/4a3aff70d05bf3972c17a60f1fd8379d6306608c.png", "width": 208, "height": 248, "date": 1634737844323 }, { "id": "7be4baa7-a328-44b0-b74e-03205c47efb4", "name": "心海头像.png", "url": "https://i0.hdslb.com/bfs/album/ef4b4440c92182b5100e08617afd7ff80a8ca2be.png", "width": 208, "height": 248, "date": 1634737843189 }, { "id": "803f501a-6632-4be9-a236-f34a66b44348", "name": "2丽莎.png", "url": "https://i0.hdslb.com/bfs/album/5263b92675b39ac0c1126358dd7253ac0d652fc8.png", "width": 143, "height": 612, "date": 1634737847473 },
+            { "id": "82dbaad2-adf0-4700-abfd-2756704b5095", "name": "1甘雨.png", "url": "https://i0.hdslb.com/bfs/album/b5741d0e9de52dcc8dedaeafe680f9fad65d9a30.png", "width": 143, "height": 612, "date": 1634737847450 }, { "id": "82f5673b-8f32-4e6e-8ee3-b1de18c9b4a3", "name": "1阿贝多.png", "url": "https://i0.hdslb.com/bfs/album/05bde2c7da68acbd4a6b5c33bd49a8c004e1bfd3.png", "width": 143, "height": 612, "date": 1634737847450 }, { "id": "84c79dbf-b956-410f-88e2-031b21b090c4", "name": "6sadwda.png", "url": "https://i0.hdslb.com/bfs/album/48ac9fbe09d7d93fbc589b7b739fc1d88a241bf7.png", "width": 64, "height": 64, "date": 1634474958196 }, { "id": "8b3f3067-4ff0-492f-a8ed-a26e29a590f0", "name": "辛焱头像.png", "url": "https://i0.hdslb.com/bfs/album/db342ffeb73889a67342d97778b95296729052e1.png", "width": 208, "height": 248, "date": 1634737843648 }, { "id": "8dcb64d3-7dc0-4108-b8e9-5f54a5727898", "name": "可莉头像.png", "url": "https://i0.hdslb.com/bfs/album/c31d7c1dc3804a69130a67bbaf040091ebdc9558.png", "width": 208, "height": 248, "date": 1634737844093 }, { "id": "8eff704b-d469-4b07-9186-c1b836ee3e2f", "name": "2迪奥娜.png", "url": "https://i0.hdslb.com/bfs/album/a5b2ad88e96af7ffd65d3b085e6c7ef833fefbaa.png", "width": 143, "height": 612, "date": 1634737847467 }, { "id": "92b58462-6a4a-410b-947f-f245e571498a", "name": "万叶头像.png", "url": "https://i0.hdslb.com/bfs/album/95dec236876fd30ee2e9d8aede892148c3d20d4a.png", "width": 199, "height": 242, "date": 1634737843189 }, { "id": "92ca9c2b-3806-45fe-86d8-eb830727d6ae", "name": "2凝光.png", "url": "https://i0.hdslb.com/bfs/album/566567083de89bf8cc9993742c441ba2d668d281.png", "width": 143, "height": 612, "date": 1634737847467 }, { "id": "93486ce7-0fb2-4652-b54d-742d9bbb040f", "name": "2辛焱.png", "url": "https://i0.hdslb.com/bfs/album/44fb2036038d54d9204088c6ad45b9bac6cfffc5.png", "width": 143, "height": 612, "date": 1634737847471 }, { "id": "953e797c-21d7-4980-935a-c2e5a8296e49", "name": "2dawdawd.png", "url": "https://i0.hdslb.com/bfs/album/826025ce31798b8157fb39c4f48622ed42a9bc4f.png", "width": 64, "height": 64, "date": 1634474952289 }, { "id": "96b75fc0-4f4c-4060-bfb1-e1eb8f8c1ccc", "name": "2烟绯.png", "url": "https://i0.hdslb.com/bfs/album/422b3aa6dc29e1b67294ec8ea80791fc53192f88.png", "width": 143, "height": 612, "date": 1634737847301 }, { "id": "9930d85e-9341-4593-992b-7159f7c2726c", "name": "琴头像.png", "url": "https://i0.hdslb.com/bfs/album/3f4c6d13c96a5cb0a72ecbc54b87d66332cb38db.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "99cc38df-33a2-4017-bcd5-bb3f9b20c7d6", "name": "5wadw.png", "url": "https://i0.hdslb.com/bfs/album/d1f8f81b0142e2eeed9d964f0eab824be78a7730.png", "width": 64, "height": 64, "date": 1634474956857 }, { "id": "a11ce121-ba37-4d4c-a19f-cc739acaaa32", "name": "85515.png", "url": "https://i0.hdslb.com/bfs/album/abb3a1564d99dfd706ec20a55243bff4daac2f6d.png", "width": 64, "height": 64, "date": 1634474961958 }, { "id": "a22115ed-77af-4b9f-9533-e0c099ec4004", "name": "4星单手剑.png", "url": "https://i0.hdslb.com/bfs/album/8bef6dda5265d7cf0ac3f8c3db6e9ea04f1c13a0.png", "width": 143, "height": 612, "date": 1634737845759 }, { "id": "a96096dc-e62f-42e1-9e79-6183d47639aa", "name": "2雷泽.png", "url": "https://i0.hdslb.com/bfs/album/97dacdb135c365ed5a5f97fee031e86be4cb2b3a.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "ad5a1de0-2aa8-499c-87f8-ee3cb814c3eb", "name": "4星长柄.png", "url": "https://i0.hdslb.com/bfs/album/9d86a7f89e0d653c68fe79873275808aa8941c5f.png", "width": 143, "height": 612, "date": 1634737845377 }, { "id": "af3a05e0-2cb2-446d-80b0-74251ed46cfb", "name": "班尼特头像.png", "url": "https://i0.hdslb.com/bfs/album/8284bef55c88394b52096acd289f394026798431.png", "width": 208, "height": 248, "date": 1634737844093 }, { "id": "b77ebf60-9fbf-44dc-9536-001db1b10bdd", "name": "九条头像.png", "url": "https://i0.hdslb.com/bfs/album/863d20092b7126847aee6907d65b5ac917075ca5.png", "width": 208, "height": 248, "date": 1634737841163 }, { "id": "b7e34c5b-7341-424b-a8d5-9b09b632482d", "name": "1温迪.png", "url": "https://i0.hdslb.com/bfs/album/dec1bbc0da4ab3edf8d2d01db7205cd9a45fce6a.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "b86ef8c7-9bf9-4ad7-904c-b8366aff2362", "name": "甘雨头像.png", "url": "https://i0.hdslb.com/bfs/album/edac130d2438fbea4f69039af3a518c707bde927.png", "width": 208, "height": 248, "date": 1634737843649 }, { "id": "b940dd85-4f54-4a47-8609-a41033f71ac3", "name": "2皇女.png", "url": "https://i0.hdslb.com/bfs/album/45439e00fa9fc6b11f9332f5bff450be93d9d924.png", "width": 143, "height": 612, "date": 1634737844622 }, { "id": "b9d74be6-9cb6-4e93-b9c1-c887592aeb61", "name": "1刻晴.png", "url": "https://i0.hdslb.com/bfs/album/1ae6d1386ee89052587b595190926504ed23ce38.png", "width": 143, "height": 612, "date": 1634737847473 }, { "id": "bb2433c7-7833-48e2-b2db-1a9f12af3cbc", "name": "影头像.png", "url": "https://i0.hdslb.com/bfs/album/19e1318fd46fc9aa874c62388cd2b6168545382d.png", "width": 208, "height": 248, "date": 1634737843189 }, { "id": "bbdabe5a-99d6-45e7-886e-d4af7564ac79", "name": "砂糖头像.png", "url": "https://i0.hdslb.com/bfs/album/b472c4bc61a1fadc758df850c6f9e288e0074c50.png", "width": 208, "height": 248, "date": 1634737844095 }, { "id": "c05f8edf-94bd-4063-b3cf-da4764332ff5", "name": "重云头像.png", "url": "https://i0.hdslb.com/bfs/album/5a7d0d7c635bd4c67b8aa32b5907d98ef4ff3233.png", "width": 208, "height": 248, "date": 1634737843178 }, { "id": "c73947bd-5c4b-44c5-a251-47006f54f1f5", "name": "七七头像.png", "url": "https://i0.hdslb.com/bfs/album/7736180cccbeddccf8721bd9169f7d019ecb8cd6.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "d3638cb8-ecd9-428a-ab75-a8f650c8eddd", "name": "4星法器.png", "url": "https://i0.hdslb.com/bfs/album/a73aae4b6fba6a7afb7a5ea6433ab70440aad2b7.png", "width": 143, "height": 612, "date": 1634737845706 }, { "id": "d3661a54-f8a8-47ba-927b-62bd91641470", "name": "3wad.png", "url": "https://i0.hdslb.com/bfs/album/02c5ea843ca78fb3dbc65d906a8c926db0b02842.png", "width": 64, "height": 64, "date": 1634474954030 }, { "id": "d3b473d7-f269-4daf-a9fa-e1d781ea707e", "name": "迪卢克头像.png", "url": "https://i0.hdslb.com/bfs/album/015333b4c9eeaa6a870b73410ab70f11409c2bdb.png", "width": 208, "height": 248, "date": 1634737844095 }, { "id": "d3bd83a1-30cb-4e8a-a938-520406504c11", "name": "尤拉头像.png", "url": "https://i0.hdslb.com/bfs/album/0e3a332c9d244f2860670e6ed50dd20e3b96dcd3.png", "width": 208, "height": 248, "date": 1634737843582 }, { "id": "d623a92e-8fbb-4711-8add-6ca4bd4ea303", "name": "2罗莎莉亚.png", "url": "https://i0.hdslb.com/bfs/album/be96353a021c57fab10efccb6d19b6cf7f705c3f.png", "width": 143, "height": 612, "date": 1634737847473 }, { "id": "d668c6c4-b084-468a-90c0-0fef65608f8b", "name": "风.png", "url": "https://i0.hdslb.com/bfs/album/d8eef836e046359f93fefbb6bec7b236b6aa2c03.png", "width": 400, "height": 420, "date": 1634737844391 }, { "id": "d804c174-11f8-45d1-bddf-39d320a53b71", "name": "4星弓.png", "url": "https://i0.hdslb.com/bfs/album/9db770f22cc6fbf8cdaf3fdb7488bdc49ace6191.png", "width": 143, "height": 612, "date": 1634737845759 }, { "id": "d96b9dc7-5124-45ea-9cc7-cb4d9b0ee5e8", "name": "1魈.png", "url": "https://i0.hdslb.com/bfs/album/51f143718cc5f98e0845527d612d4ab14fa99c58.png", "width": 143, "height": 612, "date": 1634737847471 }, { "id": "d9ca3274-79d0-4bab-9660-ecacae777f50", "name": "早柚头像.png", "url": "https://i0.hdslb.com/bfs/album/5748b969abd191af373f3887b0d5c9ed4ec73914.png", "width": 208, "height": 248, "date": 1634737843189 }, { "id": "dee3ab2f-43c2-46e4-b99a-f840a2bc54f3", "name": "女仆头像.png", "url": "https://i0.hdslb.com/bfs/album/3141501e60c7444af84c8bb6bd51fb7770c3335d.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "dfad8679-7d69-4d45-92ea-294e5de60352", "name": "2安伯.png", "url": "https://i0.hdslb.com/bfs/album/b6b2e5959ef9654e95cc7ae2050076263abbe897.png", "width": 143, "height": 612, "date": 1634737847474 }, { "id": "e33989cb-bb9b-4ffc-8fe8-f69ce542c4a9", "name": "2砂糖.png", "url": "https://i0.hdslb.com/bfs/album/6abe087a861288a1cd694bf15d1cfd59a25456db.png", "width": 143, "height": 612, "date": 1634737847467 }, { "id": "e5d0b405-6444-4976-ad42-f7f2ba1d9686", "name": "温迪头像.png", "url": "https://i0.hdslb.com/bfs/album/6cc153028ef4a60724a4a7cecc766b18ce865d4c.png", "width": 208, "height": 248, "date": 1634737844078 }, { "id": "e933d65e-3f0c-44a4-8bf2-24cf0033d619", "name": "阿贝多头像.png", "url": "https://i0.hdslb.com/bfs/album/bb0181c9dd8b536454dc025d9ce7f4456abadb8e.png", "width": 208, "height": 248, "date": 1634737843648 }, { "id": "e9b899ab-1286-4c48-b794-8f6a9db9898e", "name": "罗莎莉亚头像.png", "url": "https://i0.hdslb.com/bfs/album/3afbf6f6071ab0641f87ed842277bbb796b88b0a.png", "width": 208, "height": 248, "date": 1634737843649 }, { "id": "e9e3609e-4d3d-447a-9261-d8d536eff686", "name": "莫娜头像.png", "url": "https://i0.hdslb.com/bfs/album/fe7b471e495a1aaa1f0d869ca220237bf8bea3e9.png", "width": 208, "height": 248, "date": 1634737844094 }, { "id": "eb82a6e1-a76b-4f9d-9cc7-f40a1edabe0e", "name": "迪奥娜头像.png", "url": "https://i0.hdslb.com/bfs/album/a84352f884e167e85c34103a5e68308c631a269e.png", "width": 208, "height": 248, "date": 1634737843646 }, { "id": "edf97018-96ac-44b7-b52e-cf8d278aa346", "name": "4awds.png", "url": "https://i0.hdslb.com/bfs/album/a193af430763f4ff3231b35d3aa65739d9cfca6b.png", "width": 64, "height": 63, "date": 1634474955470 }, { "id": "f0736746-a89a-4a6a-82af-1cb089a725d5", "name": "2女仆.png", "url": "https://i0.hdslb.com/bfs/album/daace5424e3d9d016f2f6c158971baf090044dad.png", "width": 143, "height": 612, "date": 1634737847472 }, { "id": "f0aba861-ca9e-4209-b371-7f49239b451e", "name": "2班尼特.png", "url": "https://i0.hdslb.com/bfs/album/998277d9f6d74ae6bd644a84a48a7bca3591d2fd.png", "width": 143, "height": 612, "date": 1634737847471 }, { "id": "f10f1c3d-39c4-4056-abcc-f4257feda4dc", "name": "1万叶.png", "url": "https://i0.hdslb.com/bfs/album/a3cc11a90e52799693fd10c5b4ab680b36b08090.png", "width": 143, "height": 612, "date": 1634737847473 },
+            { "id": "f2e14901-3a55-4dac-aab7-18633f010b96", "name": "5三星长柄.png", "url": "https://i0.hdslb.com/bfs/album/ca2ee70e315faeaa1f007f1532c404c751fd754b.png", "width": 143, "height": 612, "date": 1634737845382 }, { "id": "f8cbc5ec-3411-40bd-a728-5a9ecc126c9b", "name": "1莫娜.png", "url": "https://i0.hdslb.com/bfs/album/892e1fb50b6cc73af8bf59606739f5dc296426a4.png", "width": 143, "height": 612, "date": 1634737847474 }, { "id": "ffc378d1-7a73-4a3c-8555-a013a7363215", "name": "宵宫头像.png", "url": "https://i0.hdslb.com/bfs/album/a3b1a5739a0ee36dc5891d8294b483ce7267af43.png", "width": 208, "height": 248, "date": 1634737843189 }, { "name": "1一斗.png", "url": "https://i0.hdslb.com/bfs/album/31bdfdb617a768cd491ddd56ead6e61dd7e4d0a4.png" }, { "name": "2五郎.png", "url": "https://i0.hdslb.com/bfs/album/21c374b788498f1d2689c5cdd2a8c99a08bdbb0f.png" }, { "name": "2托马.png", "url": "https://i0.hdslb.com/bfs/album/c88705c910e6b9b46cc71ab4395be746763b7d49.png" }, { "name": "一斗头像.png", "url": "https://i0.hdslb.com/bfs/album/1ec78bab297bd6aed2c8c2e14c2130d559569159.png" }, { "name": "五郎头像.png", "url": "https://i0.hdslb.com/bfs/album/834a49c50aa91f8db71eb63e4f4352fb8da2fbf8.png" }, { "name": "托马头像.png", "url": "https://i0.hdslb.com/bfs/album/1c5900da632ed1c25572f9df0cea5f8cb883a784.png" }]
+
+            var eggs = ["5192527", "7212930", "11182228", "12232431", "13192030", "14212729", "10222831", "8182025", "6212327", "5242930", "11192526", "12222932", "9212831", "7192530", "4202426", "9182332", "2172231", "1162730", "0212628", "11182332"];
+            var eggsimg = [{ "id": "0a16db57-288a-44bc-ac6c-2977bfa9c6cd", "name": "11182332.jpg", "url": "https://i0.hdslb.com/bfs/album/09da06f6029658064148d50504d4b18a78ca405e.jpg", "width": 690, "height": 320, "date": 1634912672576 }, { "id": "1190551d-451a-4f19-b5f8-401079f55cb5", "name": "12232431.jpg", "url": "https://i0.hdslb.com/bfs/album/a2b889ed7215111bbdf181362ef269c2baf49551.jpg", "width": 1080, "height": 533, "date": 1634912672623 }, { "id": "1df387e4-f152-4e12-8554-0292684f673b", "name": "2172231.jpg", "url": "https://i0.hdslb.com/bfs/album/f0d9255db7a4c0ad7caa8fe60bf7c8746e2516f9.jpg", "width": 690, "height": 320, "date": 1634912672513 }, { "id": "396a3c0c-8dcb-4c54-b98d-d13b8973a4e9", "name": "13192030.jpg", "url": "https://i0.hdslb.com/bfs/album/253392e3049a38636051024d0bf3c43f56b8b29a.jpg", "width": 690, "height": 320, "date": 1634912672576 }, { "id": "58380acc-6935-49de-aa2f-eb4404fd0c9f", "name": "0212628.jpg", "url": "https://i0.hdslb.com/bfs/album/f50dddb33dace7dfdf7c9cfdcd828a0d3c48b4f8.jpg", "width": 690, "height": 320, "date": 1634912672576 }, { "id": "6a4c14b4-ac63-4a05-90c8-f63126735289", "name": "10222831.jpg", "url": "https://i0.hdslb.com/bfs/album/52e7e01dd37ab298dfe312a0d9afe23d2f129fa3.jpg", "width": 690, "height": 320, "date": 1634912672676 }, { "id": "7007cdbf-4f01-4186-aa77-238a805f1327", "name": "5242930.jpg", "url": "https://i0.hdslb.com/bfs/album/38e6603518001313df941382f353e374f8a8cddc.jpg", "width": 690, "height": 320, "date": 1634912672577 }, { "id": "702150d3-6b77-4843-91dc-7a708ee2bd7f", "name": "9212831.jpg", "url": "https://i0.hdslb.com/bfs/album/f02f669692c3c1a78db500e7312a0979d9f55675.jpg", "width": 690, "height": 320, "date": 1634912672575 }, { "id": "89fb4337-9547-4a0f-a04e-014b0c4afe83", "name": "1162730.jpg", "url": "https://i0.hdslb.com/bfs/album/f2105414200c15ec4195657af1468339a38c9faa.jpg", "width": 690, "height": 320, "date": 1634912672513 }, { "id": "a3903b09-5b5d-4a14-a43e-a4aa0fc0e727", "name": "14212729.jpg", "url": "https://i0.hdslb.com/bfs/album/1c6e612e0131aef03355891f83ca0cb67b4864e1.jpg", "width": 690, "height": 320, "date": 1634912672513 }, { "id": "a8dd251f-cb79-47f1-9c0f-f28ec8d22323", "name": "7192530.jpg", "url": "https://i0.hdslb.com/bfs/album/3d3997f1ca805c27ce8334064ec7d4063fa5f09d.jpg", "width": 690, "height": 320, "date": 1634912672676 }, { "id": "ac07dbeb-e592-41f3-baab-116476651da2", "name": "12222932.jpg", "url": "https://i0.hdslb.com/bfs/album/ebc73bae437aa70fedc8aac76ae1fbed686e41e3.jpg", "width": 690, "height": 320, "date": 1634912672576 }, { "id": "bf50a5fa-5e63-48c7-b758-a36f4bff7f16", "name": "4202426.jpg", "url": "https://i0.hdslb.com/bfs/album/b3fb0bb0e8c6071e37ae85b2d13a62b01f185624.jpg", "width": 690, "height": 320, "date": 1634912672676 }, { "id": "c87993d0-177b-4fea-afd6-431c78bb618d", "name": "9182332.jpg", "url": "https://i0.hdslb.com/bfs/album/84f35c9f4f57116551aa575d427fa1253b1bf47a.jpg", "width": 690, "height": 320, "date": 1634912672512 }, { "id": "cc534e9f-e082-47a8-8e5a-33c72f4fa6b3", "name": "7212930.jpg", "url": "https://i0.hdslb.com/bfs/album/e1ba814d0d7ca21d97535d2e142e4cd05819b1b2.jpg", "width": 1080, "height": 533, "date": 1634912672623 }, { "id": "d10a662c-68bd-4493-83b2-89f6ac3f1bdf", "name": "11182228.jpg", "url": "https://i0.hdslb.com/bfs/album/5709623ce88c70a9c4e0213a728d99383a221a40.jpg", "width": 1080, "height": 533, "date": 1634912672623 }, { "id": "d7086e7e-aad3-4ef6-889f-e5503d17cc2d", "name": "6212327.jpg", "url": "https://i0.hdslb.com/bfs/album/251411ac7512aed14e3e95ce41b41702d123a69e.jpg", "width": 690, "height": 320, "date": 1634912672672 }, { "id": "f4dd1bf4-3776-4604-a073-ff53b58d79f2", "name": "11192526.jpg", "url": "https://i0.hdslb.com/bfs/album/317c090d180fd5fb8782223a656700bd1efed133.jpg", "width": 690, "height": 320, "date": 1634912672576 }, { "id": "f9739c0e-f8cf-49fd-8cc1-82cb883c256c", "name": "8182025.jpg", "url": "https://i0.hdslb.com/bfs/album/49afeacb55b4a80bb1bd8f0e94e71a0a9a6aa975.jpg", "width": 690, "height": 320, "date": 1634912672744 }, { "id": "ffd6944e-2281-4b36-9552-8d5caa82d44e", "name": "5192527.jpg", "url": "https://i0.hdslb.com/bfs/album/e8ab81dc73e60c342f8fd14bdcf2cf5252e5d454.jpg", "width": 1080, "height": 533, "date": 1634912672747 }];
+            var name = document.querySelector(".name");
+            var names = document.querySelectorAll(".name div");
+            var chooses = document.querySelectorAll(".choose div");
+            // var speed = 17;
+            var time = 500;
+            function carddonghua(a) {
+                removeClassme(cardwrapper, 'hiden')
+
+                clearTimeout(this.timer);
+                for (var ind = 0; ind < 10; ind++) {
+                    removeClassme(cardbackground_divs[ind], "hiden")
+                }
+                for (var i = 0; i < 10; i++) {
+                    var old = parseInt(getStyle(imgs1[i], "left"));
+                    // imgs1[i].style.left = old + 1500 * window.innerWidth / 1920 + 'px';
+                    imgs1[i].style.left = old + 80 + 'vw';
+                    // moveAct(imgs1[i], "left", old, speed);
+                    // speed = speed * 0.92353;
+
+                    $(imgs1[i]).animate({
+                        left: 0
+                    }, time)
+                    time = time / 0.92353
+
+                }
+                // speed = 17;
+                time = 500;
+
+
+                if (a == 1) {
+                    for (var ind = 1; ind < 10; ind++) {
+                        addClassme(cardbackground_divs[ind], "hiden")
+                    }
+                    this.timer = setTimeout(function () {
+                        flag = 1;
+                    }, 700);
+                }
+                else {
+                    this.timer = setTimeout(function () {
+                        flag = 1;
+                    }, 1000);
+                }
+            }
+
+            window.images = new Array();
+            function preload() {
+                for (var len = 0; len < 15; len++) {
+                    for (var cs in donghuaimgs) {
+                        if (donghuaimgs[cs].name == donghuaname[len]) {
+                            images[len] = new Image();
+                            images[len].src = donghuaimgs[cs].url;
+                        }
+                    }
+                }
+                for (var len = 15; len < 31; len++) {
+                    for (var cs in imgs) {
+                        if (imgs[cs].name == star5Groupicon[len]) {
+                            images[len] = new Image();
+                            images[len].src = imgs[cs].url;
+                        }
+                    }
+                }
+                for (var len = 31; len < 50; len++) {
+                    for (var cs in imgs) {
+                        if (imgs[cs].name == star4Groupicon[len]) {
+                            images[len] = new Image();
+                            images[len].src = imgs[cs].url;
+                        }
+                    }
+                }
+                images[50] = new Image();
+                images[50].src = "https://i0.hdslb.com/bfs/album/18e53ec89d7404c026386b5549ba83bdaa7f660c.jpg";
+                for (var len = 51; len < 56; len++) {
+                    for (var cs in imgs) {
+                        if (imgs[cs].name == star3_1[len]) {
+                            images[len] = new Image();
+                            images[len].src = imgs[cs].url;
+                        }
+                    }
+                }
+                images[56] = new Image();
+
+                images[56].src = "https://i0.hdslb.com/bfs/album/362a9ad56a7158c60409effc1eaf278078236087.jpg";
+            }
+            preload();
+            for (var i = 0; i < 16; i++) {
+                for (x in imgs) {
+
+                    if (imgs[x].name == star5Groupicon[i]) {
+                        names[i].style.backgroundImage = "url(" + imgs[x].url + ")"
+                        chooses[i].style.backgroundImage = "url(" + imgs[x].url + ")"
+                    }
+                }
+            }
+            for (var c = 16; c < 35; c++) {
+                for (y in imgs) {
+
+                    if (imgs[y].name == star4Groupicon[c - 16]) {
+                        names[c].style.backgroundImage = "url(" + imgs[y].url + ")"
+                        chooses[c].style.backgroundImage = "url(" + imgs[y].url + ")"
+                    }
+                }
+            }
+
+
+
+            var btn01 = document.querySelector(".btn01");
+            var imgs1 = document.querySelectorAll(".cardwrapper div");
+            var cardwrapper = document.querySelector(".cardwrapper");
+            var flag = 1;
+            var toshow = document.querySelector(".toshow");
+            var showwrapper = document.querySelector(".showwrapper");
+            var index = document.querySelector(".index");
+            var tochoose = document.querySelector(".tochoose");
+            var choosewrapper = document.querySelector(".choosewrapper");
+            var recordwrapper = document.querySelector(".recordwrapper");
+            var torecord = document.querySelector(".torecord");
+            var name = document.querySelector(".name");
+
+
+
+
+            toshow.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(showwrapper, 'hiden')
+                changeClass(index, 'hiden')
+            };
+            tochoose.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(choosewrapper, 'hiden')
+                changeClass(index, 'hiden')
+            };
+            torecord.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(showwrapper, 'hiden')
+                changeClass(recordwrapper, 'hiden')
+            };
+            var back1 = document.querySelector(".back1");
+            var back2 = document.querySelector(".back2");
+            var back3 = document.querySelector(".back3");
+            var zhanshi = document.querySelector(".zhanshi");
+
+            window.getGroup5 = star5Group[want5];
+            window.getGroup4 = [star4Group[want4_1], star4Group[want4_2], star4Group[want4_3]];
+            back1.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(index, 'hiden')
+                changeClass(choosewrapper, 'hiden')
+                if (get4_2.length == 4) {
+                    var points = [];
+                    points = points.concat(get4_2);
+                    points.sort(function (o, p) { return o - p });
+                    console.log(points)
+                    want5 = points[0];
+                    want4_1 = points[1] - 16;
+                    want4_2 = points[2] - 16;
+                    want4_3 = points[3] - 16;
+                    getGroup5 = star5Group[want5];
+                    getGroup4 = [star4Group[want4_1], star4Group[want4_2], star4Group[want4_3]];
+
+
+
+
+
+                    for (var inde = 0; inde < 20; inde++) {
+                        if (points[0].toString() + points[1].toString() + points[2] + points[3] == eggs[inde]) {
+
+
+                            for (var g in eggsimg) {
+                                if (eggsimg[g].name == eggs[inde] + '.jpg') {
+                                    zhanshi.style.backgroundImage = "url(" + eggsimg[g].url + ")"
+                                }
+                            }
+
+
+                        }
+
+                    }
+
+
+
+                }
+                window.choukaimgs = new Array();
+                (function () {
+                    for (var len = 0; len < 3; len++) {
+                        for (var cs in imgs) {
+                            if (imgs[cs].name == getGroup4[len]) {
+                                choukaimgs[len] = new Image();
+                                choukaimgs[len].src = imgs[cs].url;
+                            }
+                        }
+                        for (var cs in imgs) {
+                            if (imgs[cs].name == getGroup5) {
+                                choukaimgs[3] = new Image();
+                                choukaimgs[3].src = imgs[cs].url;
+                            }
+                        }
+                    }
+                })();
+            };
+            back2.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(index, 'hiden')
+                changeClass(showwrapper, 'hiden')
+            };
+            back3.onclick = function () {
+                fanhuiaudio.currentTime = 0.1;
+                fanhuiaudio.play();
+                changeClass(recordwrapper, 'hiden')
+                changeClass(showwrapper, 'hiden')
+            };
+
+            var shows = [];
+            var btn01 = document.querySelector(".btn01");
+            btn01.onclick = function () {
+                cardsss(1);
+
+            };
+
+            var btn02 = document.querySelector(".btn02");
+            btn02.onclick = function () {
+                cardsss(10);
+
+            };
+            function cardsss(a) {
+
+                if (flag == 1) {
+                    flag = 0;
+
+
+                    var flagdonghua5 = 0;
+                    var flagdonghua4 = 0;
+                    flagdonghua6 = true;
+
+                    for (i = 0; i < a; i++) {
+                        var newinform = document.createElement("li");
+                        var newwusi = document.createElement("span");
+
+
+
+
+                        var jinshu = document.querySelector(".jinshu");
+                        var jingaiall = document.querySelector(".jingaiall");
+                        var jinsum = document.querySelector(".jinsum");
+                        var cardsum = document.querySelector(".cardsum");
+                        var leiji = document.querySelector(".leiji");
+
+                        var zishu = document.querySelector(".zishu");
+                        var zigaiall = document.querySelector(".zigaiall");
+                        var zisum = document.querySelector(".zisum");
+
+                        random = Math.floor(Math.random() * 1000);
+                        if (count4 < 9 && count5 < 73) {
+                            if (random < 6) { g5 = 1; }
+                            else if (random > 948) { g4 = 1; }
+                            else { g3 = 1; }
+                        };
+
+                        if (count4 < 9 && count5 > 72 && count5 < 89) {
+                            if (random < (6 + makeUp)) { g5 = 1; makeUp = 60; }
+                            else if (random > 948) { g4 = 1; makeUp = makeUp + 60; }
+                            else { g3 = 1; makeUp = makeUp + 60; }
+                        };
+
+                        if (count4 > 8 && count5 < 73) {
+                            if (random < 6) { g5 = 1; }
+
+                            else { g4 = 1; }
+                        };
+
+                        if (count4 > 8 && count5 > 72 && count5 < 89) {
+                            if (random < (6 + makeUp)) { g5 = 1; makeUp = 60; }
+
+                            else { g4 = 1; makeUp = makeUp + 60; }
+                        };
+
+                        if (count5 == 89) {
+                            g5 = 1;
+                            makeUp = 60;
+                        };
+                        while (g3) {
+                            random2 = Math.floor(Math.random() * 5);
+                            // console.log("3星武器");
+                            newinform.innerHTML = "3星武器";
+                            father.appendChild(newinform);
+                            var sanxin = count4 % 10
+                            shows.push("5" + sanxin + star3_1[random2].slice(1));
+                            g3 = 0; sum++; count5++; count4++; count4_3++;
+                        };
+
+                        while (g4) {
+
+                            id++;
+                            flagdonghua4 = flagdonghua4 + 1;
+                            random2 = Math.floor(Math.random() * 2);
+                            random3 = Math.floor(Math.random() * 3);
+                            random4 = Math.floor(Math.random() * 19);
+                            random5 = Math.floor(Math.random() * 3);
+                            var random7 = Math.floor(Math.random() * 5);
+                            // 御三家 !
+                            random6 = Math.floor(Math.random() * 20);
+                            random8 = Math.floor(Math.random() * 2)
+                            if (random2 || g4Wrong) {
+
+                                // console.log(getGroup4[random3]);
+                                newwusi.innerHTML = "[" + getGroup4[random3].slice(1, -4) + "] ";
+
+                                cardlist.push({
+                                    id: id - 1,
+                                    name: "[" + getGroup4[random3].slice(1, -4) + "] ",
+                                    color: "#9d4edd"
+                                })
+
+                                newwusi.style.color = "#9d4edd";
+                                showcard.appendChild(newwusi);
+                                newinform.innerHTML = getGroup4[random3].slice(1, -4);
+                                father.appendChild(newinform);
+                                shows.push(getGroup4[random3]);
+                                g4 = 0; count4 = 0; _4++; sum++; count5++; g4Wrong = 0; count4_3++;
+                            }
+                            else if (random5 != random6) {
+                                if (random8 != Math.floor(Math.random() * 3)) {
+                                    // console.log(star4Group[random4]);
+                                    newwusi.style.color = "#00afb9";
+
+                                    cardlist.push({
+                                        id: id - 1,
+                                        name: "[" + star4Group[random4].slice(1, -4) + "] ",
+                                        color: "#00afb9"
+                                    })
+
+                                    newwusi.innerHTML = "[" + star4Group[random4].slice(1, -4) + "] ";
+                                    showcard.appendChild(newwusi);
+                                    newinform.innerHTML = star4Group[random4].slice(1, -4); father.appendChild(newinform);
+                                    shows.push(star4Group[random4]);
+                                    g4 = 0; count4 = 0; _4++; sum++; count5++; g4Wrong++; count4_3++;
+                                }
+                                else {
+                                    // console.log("歪4*");
+                                    newwusi.style.color = "#2a6f97";
+                                    newwusi.innerHTML = "[" + star4_1[random7].slice(0, -4) + "] ";
+
+                                    cardlist.push({
+                                        id: id - 1,
+                                        name: "[" + star4_1[random7].slice(0, -4) + "] ",
+                                        color: "#2a6f97"
+                                    })
+
+                                    showcard.appendChild(newwusi); newinform.innerHTML = star4_1[random7].slice(0, -4);
+                                    father.appendChild(newinform);
+                                    shows.push(star4_1[random7]);
+                                    g4 = 0; count4 = 0; _4++; sum++; count5++; g4Wrong++; count4_3++;
+                                }
+
+                            }
+                            else {
+                                count4_3 = count4_3 + 1;
+                                // console.log(star4GroupWrong_2[random5] + ",触发小概率事件，获得御三家！");
+                                newwusi.style.color = "#c9184a";
+                                newwusi.innerHTML = "[" + star4GroupWrong_2[random5].slice(1, -4) + count4_3 + "] ";
+
+                                cardlist.push({
+                                    id: id - 1,
+                                    name: "[" + star4GroupWrong_2[random5].slice(1, -4) + count4_3 + "] ",
+                                    color: "#c9184a"
+                                })
+
+                                showcard.appendChild(newwusi);
+                                newinform.innerHTML = star4GroupWrong_2[random5].slice(1, -4); father.appendChild(newinform);
+                                shows.push(star4GroupWrong_2[random5]);
+                                g4 = 0; count4 = 0; _4++; sum++; count5++; g4Wrong++; count4_3 = 0;
+                            }
+                        };
+
+                        while (g5) {
+
+                            var count5_1 = count5 + 1;
+                            id++;
+                            flagdonghua5 = flagdonghua5 + 1;
+                            random2 = Math.floor(Math.random() * 2);
+                            random4 = Math.floor(Math.random() * 5);
+                            if (random2 || g5Wrong) {
+
+                                // console.log(getGroup5);
+                                newwusi.style.color = "#ffbe0b";
+                                newwusi.innerHTML = "[" + getGroup5.slice(1, -4) + count5_1 + "] ";
+
+                                cardlist.push({
+                                    id: id - 1,
+                                    name: "[" + getGroup5.slice(1, -4) + count5_1 + "] ",
+                                    color: "#ffbe0b"
+                                })
+
+                                showcard.appendChild(newwusi); newinform.innerHTML = getGroup5.slice(1, -4);
+                                father.appendChild(newinform);
+                                shows.push(getGroup5);
+                                g5 = 0; count5 = 0; _5++; sum++; count4++; g5Wrong = 0; count4_3++;
+                            }
+                            else {
+                                // console.log(star5GroupWrong[random4]);
+                                newwusi.style.color = "#ff6d00";
+                                newwusi.innerHTML = "[" + star5GroupWrong[random4].slice(1, -4) + count5_1 + "] ";
+
+                                cardlist.push({
+                                    id: id - 1,
+                                    name: "[" + star5GroupWrong[random4].slice(1, -4) + count5_1 + "] ",
+                                    color: "#ff6d00"
+                                })
+
+                                showcard.appendChild(newwusi); newinform.innerHTML = star5GroupWrong[random4].slice(1, -4);
+                                father.appendChild(newinform);
+                                shows.push(star5GroupWrong[random4]);
+                                g5 = 0; count5 = 0; _5++; sum++; count4++; g5Wrong++; count4_3++;
+                            }
+                        };
+
+
+
+                    };
+
+                    function run4() {
+                        if (!flagdonghua6) return false;
+                        choukaaudio.currentTime = 0.05;
+
+                        choukaaudio.play();
+                        removeClassme(shipin, "hiden");
+                        shipin.src = "./紫3-9.mp4"
+                        shipin.load();
+                        shipin.currentTime = 0;
+                        shipin.play();
+
+                        timedh4 = setTimeout(function () {
+                            choukaaudio.pause();
+                            tiaoguoaudio.currentTime = 0.22;
+                            tiaoguoaudio.play();
+                            shipin.pause();
+                            addClassme(shipin, "hiden")
+                            $(".tiaoguo , .tiaoguowenzi").hide(0);
+
+                            donghua.style.backgroundImage = "url(https://i0.hdslb.com/bfs/album/b9f232a036914799eeec1d8e3b7ddbd88c4fdc50.jpg)"
+
+                        }, 6050)
+
+
+                    }
+                    function run5() {
+                        if (!flagdonghua6) return false;
+                        choukaaudio.currentTime = 0.05;
+
+                        choukaaudio.play();
+                        removeClassme(shipin, "hiden");
+                        shipin.src = "./金2-8_1.mp4"
+
+                        shipin.load();
+                        shipin.currentTime = 0;
+                        shipin.play();
+
+                        timedh4 = setTimeout(function () {
+                            choukaaudio.pause();
+                            tiaoguoaudio.currentTime = 0.22;
+                            tiaoguoaudio.play();
+                            shipin.pause();
+                            addClassme(shipin, "hiden")
+                            $(".tiaoguo , .tiaoguowenzi").hide(0);
+
+                            donghua.style.backgroundImage = "url(https://i0.hdslb.com/bfs/album/b9f232a036914799eeec1d8e3b7ddbd88c4fdc50.jpg)"
+
+                        }, 6050)
+
+
+                    }
+                    function run3() {
+                        if (!flagdonghua6) return false;
+                        choukaaudio.currentTime = 0.05;
+
+                        choukaaudio.play();
+                        removeClassme(shipin, "hiden");
+                        shipin.src = "./白3-9.mp4"
+
+                        shipin.load();
+                        shipin.currentTime = 0;
+                        shipin.play();
+
+                        timedh4 = setTimeout(function () {
+                            choukaaudio.pause();
+                            tiaoguoaudio.currentTime = 0.22;
+                            tiaoguoaudio.play();
+                            shipin.pause();
+                            addClassme(shipin, "hiden")
+                            $(".tiaoguo , .tiaoguowenzi").hide(0);
+
+                            donghua.style.backgroundImage = "url(https://i0.hdslb.com/bfs/album/b9f232a036914799eeec1d8e3b7ddbd88c4fdc50.jpg)"
+
+                        }, 6050)
+
+
+                    }
+
+                    // async function run3() {
+                    //     if (!flagdonghua6) return false;
+
+                    //     for (var ch in donghuaimgs) {
+                    //         if (!flagdonghua6) break;
+
+                    //         if (donghuaname[0] == donghuaimgs[ch].name) {
+                    //             donghua.style.backgroundImage = "url(" + donghuaimgs[ch].url + ")"
+                    //             await sleep(1050);
+                    //             break;
+                    //         }
+                    //     }
+                    //     for (var ch in donghuaimgs) {
+                    //         if (!flagdonghua6) break;
+
+                    //         if (donghuaname[1] == donghuaimgs[ch].name) {
+                    //             donghua.style.backgroundImage = "url(" + donghuaimgs[ch].url + ")"
+                    //             await sleep(850);
+                    //             break;
+                    //         }
+                    //     }
+                    //     for (var index = 2; index < 6; index++) {
+                    //         if (!flagdonghua6) break;
+
+                    //         for (var ch in donghuaimgs) {
+                    //             if (donghuaname[index] == donghuaimgs[ch].name) {
+                    //                 donghua.style.backgroundImage = "url(" + donghuaimgs[ch].url + ")"
+                    //                 await sleep(750);
+                    //             }
+                    //         }
+                    //     }
+                    //     for (var ch in donghuaimgs) {
+                    //         if (!flagdonghua6) break;
+
+                    //         if (donghuaname[14] == donghuaimgs[ch].name) {
+                    //             donghua.style.backgroundImage = "url(" + donghuaimgs[ch].url + ")"
+                    //             break;
+                    //         }
+                    //     }
+
+                    //     $(".tiaoguo , .tiaoguowenzi").hide(0);
+
+                    // }
+                    removeClassme(donghua, "hiden");
+                    addClassme(cardwrapper, "hiden");
+                    var flag3dh = 0, flag4dh = 0, flag5dh = 0;
+                    if (flagdonghua5) {
+                        run5();
+
+                    }
+                    else if (flagdonghua4) {
+                        run4();
+
+                    }
+                    else {
+                        run3();
+                    }
+
+                    var timer3 = setTimeout(() => {
+
+                        shipin.pause();
+                        $(".tiaoguo , .tiaoguowenzi").hide(0);
+                        addClassme(shipin, "hiden")
+
+                        setTimeout(function () {
+                            $(".donghua").one("click", function () {
+                                fanhuiaudio.currentTime = 0;
+                                fanhuiaudio.play();
+
+                                addClassme(donghua, "hiden")
+                                addClassme(cardwrapper, "hiden")
+                                shipin.pause();
+
+                                addClassme(shipin, "hiden")
+
+                                $(".tiaoguo , .tiaoguowenzi").hide(0);
+
+                            })
+                        }, 1300)
+
+
+                        carddonghua(a);
+
+                        flagdonghua6 = false;
+
+                    }, 6150);
+                    $(".donghua").one("click", ".tiaoguo ,.tiaoguowenzi", function () {
+                        clearTimeout(timer3);
+                        clearTimeout(timedh4);
+                        clearTimeout(timedh5);
+                        clearTimeout(timedh3);
+                        choukaaudio.pause();
+                        tiaoguoaudio.currentTime = 0.25;
+                        tiaoguoaudio.play();
+                        if (flagdonghua6) {
+
+                            flagdonghua6 = false;
+                            shipin.pause();
+                            $(".tiaoguo ,.tiaoguowenzi").hide(0)
+
+                            addClassme(shipin, "hiden")
+
+                            donghua.style.backgroundImage = "url(https://i0.hdslb.com/bfs/album/b9f232a036914799eeec1d8e3b7ddbd88c4fdc50.jpg)"
+
+                            setTimeout(function () {
+                                $(".donghua").one("click", function () {
+                                    fanhuiaudio.currentTime = 0;
+                                    fanhuiaudio.play();
+                                    addClassme(donghua, "hiden")
+
+                                    addClassme(cardwrapper, "hiden")
+
+                                })
+                            }, 1300)
+
+
+                            carddonghua(a);
+
+                        };
+                    })
+
+
+
+                    $(".donghua").one("click", "#shipin", function () {
+                        $(".tiaoguo ,.tiaoguowenzi").fadeIn()
+
+                    })
+
+
+
+
+
+
+
+                    cardsum.innerHTML = sum;
+
+
+                    if (flagdonghua5) {
+                        jinsum.innerHTML = _5;
+                        jingaiall.innerHTML = (((_5 / (sum - count5)).toFixed(4)) * 100).toFixed(2) + "%";
+                        jinshu.innerHTML = (1 / (_5 / (sum - count5))).toFixed(2);
+
+                        leiji.innerHTML = count5;
+
+
+                    }
+
+                    if (flagdonghua4) {
+                        zisum.innerHTML = _4;
+                        zigaiall.innerHTML = (((_4 / (sum - count4)).toFixed(4)) * 100).toFixed(2) + "%";
+
+                        zishu.innerHTML = (1 / (_4 / (sum - count4))).toFixed(2);
+
+                        leiji.innerHTML = count5;
+
+
+                    }
+
+
+                    cardlist[0] = {
+                        id: -2,
+                        makeUp: makeUp,
+                        want5: want5,
+                        want4_1: want4_1,
+                        want4_2: want4_2,
+                        want4_3: want4_3,
+                        count4: count4,
+                        count5: count5,
+                        sum: sum,
+                        _4: _4,
+                        _5: _5,
+                        g4Wrong: g4Wrong,
+                        g5Wrong: g5Wrong,
+                        count4_3: count4_3,
+                        voiceval: voiceval,
+                        tipsval: tipsval
+
+                    };
+                    localStorage.setItem("cardlist", JSON.stringify(cardlist))
+
+
+                    shows = shows.slice([-a])
+                    shows.sort();
+                    for (var d = 0; d < a; d++) {
+
+                        for (var z in imgs) {
+                            if (imgs[z].name == shows[d]) {
+                                showss[d].src = imgs[z].url;
+                                if (shows[d][0] == "2" || shows[d][0] == "4") {
+
+                                    addClassme(imgs1[d], "star_4")
+                                    addClassme(showss[d], "star4")
+                                    removeClassme(imgs1[d], "star_5")
+                                    removeClassme(showss[d], "star5")
+
+                                }
+                                else if (shows[d][0] == "1") {
+
+                                    addClassme(imgs1[d], "star_5")
+                                    addClassme(showss[d], "star5")
+                                    removeClassme(imgs1[d], "star_4")
+                                    removeClassme(showss[d], "star4")
+
+                                }
+                            }
+
+                            if (imgs[z].name == "5" + shows[d].slice(2)) {
+                                showss[d].src = imgs[z].url;
+
+                                removeClassme(imgs1[d], "star_4")
+                                removeClassme(showss[d], "star4")
+
+                                removeClassme(imgs1[d], "star_5")
+                                removeClassme(showss[d], "star5")
+
+                            }
+
+                        }
+                    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                }
+
+
+
+
+            }
+
+
+        };
+    </script>
+    <style>
+        .clearfix::after,
+        .clearfix::before {
+            content: " ";
+            display: table;
+            clear: both;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        @media screen and (max-width: 600px) and (min-width: 0px) {
+            html {
+                transform: translate(-50vw, 0) rotate(90deg);
+                /* height: 110%; */
+            }
+
+            .name:hover div {
+                opacity: 1 !important;
+            }
+
+        }
+
+        .wrapper {
+            /* min-height: 400px; */
+            width: 100vw;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        *::-webkit-scrollbar {
+            display: none;
+        }
+
+
+
+
+
+        /* ！！！！！！！！！！首页！！！！！！！！！！ */
+        .index {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: url(https://i0.hdslb.com/bfs/album/362a9ad56a7158c60409effc1eaf278078236087.jpg);
+            background-size: 100%;
+            min-height: 400px;
+            background-repeat: no-repeat;
+        }
+
+        .tipswrapper {
+            width: 100vw;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+            /* backdrop-filter: blur(0.2vw) brightness(50%); */
+            background-color: #00224ebe;
+            /* background-color: bisque; */
+        }
+
+        .tools {
+            width: 100vw;
+            height: 56.25vw;
+        }
+
+        .toolstxt {
+            color: cornsilk;
+            font-size: 2vw;
+            position: absolute;
+            top: 18.5vw;
+            left: 16vw;
+        }
+
+        .toolstxt div {
+            margin: 3vw 0;
+        }
+
+        .toolsinform {
+            color: rgba(255, 248, 220, 0.795);
+            font-size: 1.6vw;
+        }
+
+        .notips {
+            position: absolute;
+            top: 20.5vw;
+            left: 26.5vw;
+        }
+
+        .novoice {
+            position: absolute;
+            top: 23.5vw;
+            left: 26.5vw;
+        }
+
+        input[type=checkbox] {
+            visibility: hidden;
+        }
+
+        .novoice,
+        .notips {
+            width: 6.25vw;
+            height: 2.01vw;
+            background: rgb(103, 114, 117);
+            margin: 1.05vw 3.16vw;
+
+            border-radius: 2.63vw;
+            position: relative;
+        }
+
+        .novoice:before,
+        .notips::before {
+            content: '';
+            position: absolute;
+            top: 1vw;
+            left: 0.74vw;
+            height: 0.105vw;
+            width: 4.736vw;
+            background: #111;
+        }
+
+        .novoice label,
+        .notips label {
+            display: block;
+            width: 1.16vw;
+            height: 1.16vw;
+            border-radius: 50%;
+
+            -webkit-transition: all .35s ease;
+            -moz-transition: all .35s ease;
+            -o-transition: all .35s ease;
+            -ms-transition: all .35s ease;
+            transition: all .35s ease;
+            cursor: pointer;
+            position: absolute;
+            top: 0.474vw;
+            z-index: 1;
+            left: 0.63vw;
+            background: cornsilk;
+        }
+
+        input[type=checkbox]:checked+label {
+            left: 4.42vw;
+            background: #7ab8ff;
+        }
+
+        .btn03 {
+            min-height: 15px;
+            width: 6vw;
+            height: 2.5vw;
+            border: solid 0.15vw rgb(68, 78, 212);
+            box-shadow: 0 0 0.2vw rgb(195, 255, 250);
+            position: absolute;
+            top: 33.2vw;
+            left: 29.8vw;
+            border-radius: 1.56vw;
+            font-size: 1.8vw;
+            line-height: 2.3vw;
+            transition: all 0.2s;
+            color: #666;
+        }
+
+        .novoice:checked+label::before {
+            color: rgb(195, 255, 250);
+        }
+
+        input[type-checkbox] {
+            visibility: hidden;
+        }
+
+        .btn03:hover {
+            box-shadow: 0 0 0.5vw rgb(195, 255, 250);
+        }
+
+        .toolsinform {
+            position: absolute;
+            top: 21.9vw;
+            left: 40vw;
+        }
+
+        .toolsinform div {
+            margin-bottom: 3.5vw;
+        }
+
+        .tips {
+            width: 100vw;
+            height: 56.25vw;
+            /* background-color: #ccc; */
+        }
+
+        .towrapper {
+            width: 100vw;
+            height: 5.5vw;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: rgba(49, 49, 49, 0.63);
+            align-items: center;
+            display: flex;
+            justify-content: center;
+        }
+
+        .jieshao1,
+        .jieshao2 {
+            position: absolute;
+            top: 7vw;
+            font-size: 2.5vw;
+            color: #eee;
+        }
+
+        .jieshao2 {
+            top: 9.5vw;
+
+        }
+
+        .totips {
+            width: 4vw;
+            height: 4vw;
+            border-radius: 50%;
+            border: blanchedalmond 0.2vw solid;
+            background-repeat: no-repeat;
+            background-size: 80%;
+            background-position: center;
+            z-index: 99;
+            background-image: url(https://i0.hdslb.com/bfs/album/f892d37f88e58fede4befcc3e025b3ac2951bdd3.png);
+            /* background-color: rgb(255, 255, 255); */
+
+        }
+
+        .totools {
+            height: 4vw;
+            width: 4vw;
+            border-radius: 50%;
+            margin-left: 6vw;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 112%;
+            z-index: 99;
+            background-image: url(https://i0.hdslb.com/bfs/album/c1865496ae72c94c8391c329d8771907ece3eb82.png);
+        }
+
+        .toactive {
+            background-color: rgba(255, 235, 205, 0.39);
+        }
+
+        @keyframes tohov {
+            50% {
+                background-color: rgba(255, 235, 205, 0.6);
+            }
+        }
+
+        .totips:hover {
+            animation: tohov 1s infinite;
+        }
+
+        .totools:hover {
+            animation: tohov 1s infinite;
+
+        }
+
+        .tipsimg {
+            width: 40vw;
+            height: 22.5vw;
+            /* background-color: bisque; */
+            position: absolute;
+            top: 12vw;
+            left: 30vw;
+            border: solid 0.14vw rgb(110, 155, 206);
+            transition: all 0.38s;
+        }
+
+        /* .tipsimg:hover{
+            top: 12vw;
+            left: 17vw;
+            width: 66vw;
+            height: 37.125vw;
+            z-index:9999999;
+            border: rgb(176, 227, 240) 0.1vw solid;
+            box-shadow: 0 1vw 2vw 0 rgba(209, 209, 209, 0.233);
+        } */
+        /* .tipsimg:hover + .to{
+            display: none;
+        } */
+        .opswrapper {
+            position: absolute;
+            top: 36.2vw;
+            left: 50%;
+            transform: translate(-50%, 0);
+        }
+
+        .ops {
+            width: 1.5vw;
+            height: 1.5vw;
+            border-radius: 50%;
+            /* background-color: chartreuse; */
+            float: left;
+            margin: 0 1vw;
+            border: #728eb3 0.2vw solid;
+            background-color: #152f4e;
+        }
+
+        .opactive {
+            background-color: #ecfdfd;
+
+        }
+
+        .tipstxt {
+            width: 100%;
+            color: #eee;
+            font-size: 2vw;
+            font-size: 1.4vw;
+            position: absolute;
+            top: 39vw;
+            text-align: center;
+            left: 50%;
+            transform: translate(-50%, 0);
+            letter-spacing: 2px;
+            text-indent: 2px;
+            line-height: 2.1vw;
+        }
+        .tipstxt>span{
+            font-size: 2vw;
+            letter-spacing: 0;
+            text-indent: 0;
+            margin-bottom: 1vw;
+            display: inline-block;
+        }
+        .back4 {
+            width: 3vw;
+            height: 3vw;
+            background-color: #ede4d8;
+            position: absolute;
+            top: 1.4vw;
+            right: 3.5vw;
+            z-index: 99;
+            border-radius: 50%;
+            border: solid 2px #aeb4be;
+            background-image: url(https://i0.hdslb.com/bfs/album/26bdb92b683b6fd90ddfbef4ecd562c0963349a7.png);
+            background-size: 65%;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+        }
+
+        .back4:hover {
+            background-color: #fcf3e7;
+            border: solid 2px #9ea3ac;
+            transition: all 0.2s;
+            transform: rotate(90deg);
+
+        }
+
+        .to {
+            position: absolute;
+            top: 22.5vw;
+            left: 0;
+            z-index: 99;
+            color: transparent;
+        }
+
+        .toleft {
+            position: absolute;
+            left: 11.2vw;
+            width: 9vw;
+            height: 7vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/9aaa13c6568abcb80f8d122d701d522bae5223ef.png);
+            background-size: 40%;
+            background-repeat: no-repeat;
+            background-position: center;
+            /* background-color: bisque; */
+
+            z-index: 99;
+        }
+
+        .toright {
+            position: absolute;
+            left: 80vw;
+            width: 9vw;
+            height: 7vw;
+            background-size: 40%;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 99;
+
+            background-image: url(https://i0.hdslb.com/bfs/album/fccc7c96d90deecafaf8074d3d41673db27687cf.png);
+        }
+
+        .hiden {
+            display: none;
+        }
+
+        @keyframes lefthov {
+            0% {}
+
+            50% {
+                background-position: 30%;
+            }
+
+            100% {}
+        }
+
+        @keyframes righthov {
+            0% {}
+
+            50% {
+                background-position: 70%;
+            }
+
+            100% {}
+        }
+
+        .img1 {
+            width: 100%;
+            background-size: 100%;
+            height: 100%;
+            background-image: url(https://i0.hdslb.com/bfs/album/eb4a90499f01847e719e8d6f62420fa9d1043ae7.jpg);
+        }
+
+        .img2 {
+            background-size: 100%;
+            width: 100%;
+            height: 100%;
+            background-image: url(https://i0.hdslb.com/bfs/album/515a10e647318c0071c84e9ca923663f07bc9bcf.jpg);
+        }
+
+        .img3 {
+            background-size: 100%;
+            width: 100%;
+            height: 100%;
+            background-image: url(https://i0.hdslb.com/bfs/album/8d9156f58505c81fe38c7939c522d92ceb695a28.jpg);
+        }
+
+        .toleft:hover {
+            animation: lefthov 1s infinite;
+        }
+
+        .toright:hover {
+            animation: righthov 1s infinite;
+        }
+
+        .quedinwrapper {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 99999;
+            background-color: rgba(56, 56, 56, 0.651);
+            /* backdrop-filter: blur(0.13vw) brightness(50%); */
+
+        }
+
+        .quedin {
+            width: 100%;
+            height: 23vw;
+            position: absolute;
+            top: 16vw;
+            left: 0;
+            background: rgb(248, 248, 248);
+            font-size: 3vw;
+            text-align: center;
+            line-height: 10vw;
+        }
+
+        .btn04 {
+            position: absolute;
+            left: 50vw;
+            top: 13vw;
+            color: #fff;
+            font-size: 3vw;
+            width: 50vw;
+            background: rgb(55, 110, 161);
+            height: 10vw;
+            border: none;
+        }
+
+        .quxiao {
+            border: none;
+
+            position: absolute;
+            color: #fff;
+
+            left: 0vw;
+            top: 13vw;
+            font-size: 3vw;
+            width: 50vw;
+            height: 10vw;
+            background-color: darkgrey;
+        }
+
+        .totipswrapper {
+            width: 4.5vw;
+            height: 4.5vw;
+            position: absolute;
+            top: 0.6vw;
+            left: 0.9vw;
+            z-index: 999;
+            cursor: pointer;
+        }
+
+        .toshow {
+            width: 4vw;
+            height: 4vw;
+            position: absolute;
+            top: 0.4vw;
+            right: 16vw;
+            z-index: 999;
+            cursor: pointer;
+        }
+
+        .tochoose {
+            width: 17vw;
+            height: 3vw;
+            position: absolute;
+            top: 26.5vw;
+            right: 23vw;
+            z-index: 999;
+            cursor: pointer;
+        }
+
+        .index img {
+            width: 100vw;
+            height: 56.25vw;
+            position: absolute;
+            user-select: none;
+
+        }
+
+        /* ！！！！！！！！！！！！！！！选择界面！！！！！！！！！！！！ */
+        .choosewrapper {
+            min-height: 400px;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            background-image: url(https://i0.hdslb.com/bfs/album/8cf834045855376e97af718c09f02e5c5241826f.jpg);
+            background-size: 100%;
+            background-repeat: no-repeat;
+        }
+
+        .name {
+            width: 43.5vw;
+            overflow: auto;
+            display: flex;
+            flex-wrap: wrap;
+            margin: 4.5vw 0 4vw 3.5vw;
+            max-height: 43vw;
+        }
+
+        .name:hover div {
+            opacity: 0.5;
+        }
+
+        .name div {
+            width: 10.833vw;
+            height: 12.917vw;
+            margin: 0vw;
+            flex-shrink: 0;
+            list-style: none;
+            background-image: url(https://i0.hdslb.com/bfs/album/863d20092b7126847aee6907d65b5ac917075ca5.png);
+            background-size: 100%;
+        }
+
+        @keyframes namedh {
+            0% {
+                background-size: 100%;
+            }
+
+            50% {
+                background-size: 107%;
+            }
+
+            100% {
+                background-size: 100%;
+            }
+        }
+
+        .name div:hover {
+            /* background-size: 107%; */
+            background-position: center;
+            opacity: 1;
+            animation: namedh 0.8s infinite;
+        }
+
+        .name::-webkit-scrollbar {
+            display: none;
+        }
+
+        .choose {
+            height: 13vw;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-height: 41vw;
+            margin: 22.5vw auto;
+
+        }
+
+        .choose:hover div {
+            opacity: 1;
+        }
+
+        .choose div {
+            width: 10.833vw;
+            height: 12.917vw;
+            flex-shrink: 0;
+            background-image: url(https://i0.hdslb.com/bfs/album/863d20092b7126847aee6907d65b5ac917075ca5.png);
+            background-size: 100%;
+            display: none;
+        }
+
+        @keyframes choosedh {
+            0% {
+                background-size: 100%;
+                opacity: 1;
+            }
+
+            50% {
+                background-size: 107%;
+                opacity: 0.7;
+            }
+
+            100% {
+                background-size: 100%;
+                opacity: 1;
+            }
+        }
+
+        .choose div:hover {
+            background-position: center;
+            animation: choosedh 0.75s infinite;
+        }
+
+
+        .back1 {
+            width: 3vw;
+            height: 3vw;
+            background-color: #ede4d8;
+            position: absolute;
+            top: 2vw;
+            right: 2vw;
+            z-index: 999;
+            border-radius: 50%;
+            border: solid 2px #aeb4be;
+            background-image: url(https://i0.hdslb.com/bfs/album/26bdb92b683b6fd90ddfbef4ecd562c0963349a7.png);
+            background-size: 65%;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+        }
+
+        /* ！！！！！！！！抽卡界面！！！！！！！！！！！！ */
+        .showwrapper {
+            width: 100vw;
+            height: 100vh;
+            min-height: 400px;
+            position: relative;
+
+        }
+
+        .zhanshi {
+            /* 1224 605 */
+            width: 50vw;
+            height: 23.19vw;
+            /* background-color: rgb(221, 174, 174); */
+            position: absolute;
+            top: 10vw;
+            left: 25vw;
+            left: 50%;
+            transform: translate(-50%, 0);
+            margin: 0 auto;
+            background-image: url(https://i0.hdslb.com/bfs/album/18e53ec89d7404c026386b5549ba83bdaa7f660c.jpg);
+            background-size: 100%;
+            transition: all 0.35s;
+            box-shadow: 0 0 1vw rgba(0, 0, 0, 0.22);
+
+        }
+
+
+
+        .zhanshi:hover {
+            top: 9.5vw;
+
+            width: 55vw;
+            height: 25.51vw;
+            /* box-shadow: 0 0 2vw rgba(0, 0, 0, 0.521); */
+            box-shadow: 0 1vw 2vw 0 rgba(50, 50, 50, 0.666);
+        }
+
+        .donghua {
+            width: 100vw;
+            height: 56.25vw;
+            position: absolute;
+            top: 0vw;
+            left: 0vw;
+            margin: 0 auto;
+            z-index: 999;
+            background-size: 100%;
+
+        }
+
+        .shipin {
+            /* width: 100vw; */
+            /* height: 56.25vw; */
+            position: absolute;
+            top: 0vw;
+            left: 0vw;
+            margin: 0 auto;
+            z-index: -10;
+            background-size: 100%;
+        }
+
+        @keyframes tiaoguodh {
+            0% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 0.75;
+            }
+
+            100% {
+                opacity: 0.4;
+            }
+        }
+
+
+        .tiaoguo {
+            width: 7vw;
+            height: 3.5vw;
+            background-color: #fff;
+            background-image: linear-gradient(to right, #8deaffbe, #6cacffe1, #8deaffc2);
+            position: absolute;
+            border-top: #fff solid 0.18vw;
+            border-bottom: rgba(255, 228, 196, 0.801) solid 0.18vw;
+            right: 4vw;
+            top: 2.2vw;
+            color: #fff;
+            line-height: 3.4vw;
+            text-align: center;
+            box-shadow: 0 0 0.6vw rgb(195, 255, 250) inset;
+            border-radius: 6%;
+            animation: tiaoguodh 1.75s infinite;
+            display: none;
+        }
+
+        .tiaoguowenzi {
+            width: 7vw;
+            height: 3.5vw;
+            position: absolute;
+            right: 4vw;
+            top: 2.2vw;
+            color: #fff;
+            font-size: 1.56vw;
+            line-height: 3.7vw;
+            display: none;
+            text-align: center;
+            transition: all 0.1s;
+            /* opacity: 0.9; */
+        }
+
+        .tiaoguowenzi:hover {
+            color: rgb(255, 248, 238);
+            font-size: 1.7vw;
+        }
+
+        .back2 {
+            width: 3vw;
+            height: 3vw;
+            background-color: #ede4d8;
+            position: absolute;
+            top: 2vw;
+            right: 2vw;
+            z-index: 99;
+            border-radius: 50%;
+            border: solid 2px #aeb4be;
+            background-image: url(https://i0.hdslb.com/bfs/album/26bdb92b683b6fd90ddfbef4ecd562c0963349a7.png);
+            background-size: 65%;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+        }
+
+        .back1:hover {
+            background-color: #fcf3e7;
+            border: solid 2px #9ea3ac;
+            transition: all 0.2s;
+            transform: rotate(90deg);
+
+        }
+
+        .back2:hover {
+            background-color: #fcf3e7;
+            border: solid 2px #9ea3ac;
+            transition: all 0.2s;
+            transform: rotate(90deg);
+
+        }
+
+        .cardwrapper {
+            display: flex;
+            margin: 0 auto;
+            justify-content: center;
+            position: relative;
+            /* top: 22vh; */
+            top: 10.89vw;
+            z-index: 9999;
+            /* border: solid 10px #fff; */
+        }
+
+
+
+
+        .cardwrapper div {
+            width: 7.45vw;
+            /* height: 31.865vw; */
+            /* background-color: aquamarine; */
+            margin: 0 0.208vw;
+            flex-shrink: 0;
+            flex-grow: 0;
+            position: relative;
+        }
+
+
+        .cardwrapper div::after {
+            content: ".";
+            color: transparent;
+            display: block;
+            width: 3.6vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/55c5c41643cf93a5b2d9519a3d01a979e3c2c56e.png);
+            background-size: 1.2vw;
+            background-repeat: repeat-x;
+            position: absolute;
+            bottom: -28.5vw;
+            left: 50%;
+            transition: all 0.15s;
+            transform: translate(-50%, 0);
+        }
+
+        .cardwrapper div:hover::after {
+
+            width: 3.7vw;
+
+            background-size: 1.25vw;
+
+            bottom: -29vw;
+
+        }
+
+        .cardwrapper div.star_5::after {
+            content: ".";
+            color: transparent;
+            display: block;
+            width: 6vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/55c5c41643cf93a5b2d9519a3d01a979e3c2c56e.png);
+            background-size: 1.2vw;
+            background-repeat: repeat-x;
+            position: absolute;
+            bottom: -28.5vw;
+            left: 50%;
+            transition: all 0.15s;
+            transform: translate(-50%, 0);
+        }
+
+        .cardwrapper div.star_5:hover:after {
+
+            width: 6.4vw;
+
+            background-size: 1.25vw;
+            bottom: -29vw;
+
+        }
+
+        .cardwrapper div.star_4::after {
+            content: ".";
+            color: transparent;
+            display: block;
+            width: 4.8vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/55c5c41643cf93a5b2d9519a3d01a979e3c2c56e.png);
+            background-size: 1.2vw;
+            background-repeat: repeat-x;
+            position: absolute;
+            bottom: -28.5vw;
+            left: 50%;
+            transition: all 0.15s;
+            transform: translate(-50%, 0);
+        }
+
+        .cardwrapper .star_4:hover:after {
+            width: 5vw;
+            background-size: 1.25vw;
+
+            bottom: -29vw;
+
+        }
+
+        .cardwrapper div img {
+            width: 7.45vw;
+            /* height: 64.4vh; */
+            /* transition: all 1s; */
+            position: absolute;
+            transition: box-shadow 1s, background-color 1s, width 0.2s, height 0.2s, margin 0.2s;
+        }
+
+        .cardwrapper div:hover img {
+            /* transition: all 0.2s; */
+            margin: -0.6vw -0.15vw 0 -0.15vw;
+            width: 105%;
+        }
+
+
+        /* box-shadow: 0 0 2vw rgba(106, 66, 250, 0.6);
+            background-color: #d6cefc; */
+
+
+        .btn02 {
+            position: absolute;
+            width: 17.865vw;
+            height: 3.96vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/ac5240e641eea4307b0aed168a3b7ff6ecd0f3bc.png);
+            background-size: 100%;
+            /* right: 20.83vw; */
+            /* left: 20.83vw; */
+            /* left: 0; */
+            top: 45vw;
+            left: 79vw;
+            z-index: 99;
+            transition: all 0.2s;
+
+        }
+
+        .btn02:active {
+            background-image: url(https://i0.hdslb.com/bfs/album/74d681c7cad8428a3062b250f0590e3d40c35c70.png);
+        }
+
+        .btn02:hover {
+            opacity: 0.8;
+        }
+
+        .btn01 {
+            position: absolute;
+            width: 17.865vw;
+            height: 3.96vw;
+            background-image: url(https://i0.hdslb.com/bfs/album/7499b15b2169eb5b237e440cecfc9af916d5c88d.png);
+            background-size: 100%;
+            transition: all 0.2s;
+
+            top: 45vw;
+            /* bottom: 0vw; */
+            left: 60vw;
+            z-index: 99;
+
+        }
+
+        .btn01:hover {
+            opacity: 0.8;
+        }
+
+        .btn01:active {
+            background-image: url(https://i0.hdslb.com/bfs/album/fec766e235560a2e9597f766b37642bf0274618d.png);
+        }
+
+        /* .star {
+            position: relative;
+            bottom: -55vh;
+            color: yellow;
+            transition: all 0.2s;
+            font-size: 30px;
+        } */
+
+        /* .star4 {
+            box-shadow: 0 0 2vw rgba(106, 66, 250, 0.6);
+            background-color: #d6cefc;
+            border-radius: 10% 10%;
+        }
+
+        .star5 {
+            box-shadow: 0 0 2vw #f1a874;
+            background-color: #f5dd9a;
+            border-radius: 10% 10%;
+        } */
+        @keyframes star4bg {
+            0% {
+                box-shadow: 0 0 2vw rgba(161, 66, 250, 0.6);
+                background-color: rgba(136, 66, 250, 0.6);
+                border-radius: 10% 10%;
+            }
+
+            50% {
+                box-shadow: 0 0 2vw #cc7fffd8;
+                background-color: #c45fffcc;
+                border-radius: 10% 10%;
+            }
+
+            100% {
+                box-shadow: 0 0 2vw rgba(161, 66, 250, 0.6);
+                background-color: rgba(136, 66, 250, 0.6);
+                border-radius: 10% 10%;
+            }
+        }
+
+        @keyframes star4light {
+            0% {
+                box-shadow: 0 0 1.5vw 0.1vw #7d799c;
+                border-radius: 10% 10%;
+                background-color: #89839e;
+
+            }
+
+            33% {
+                box-shadow: 0 0 2vw 0.3vw #f4e4ffd8;
+                border-radius: 10% 10%;
+                background-color: #dfa7ffcc;
+
+            }
+
+            66% {
+                box-shadow: 0 0 2vw 0.3vw #f4e4ffd8;
+                border-radius: 10% 10%;
+                background-color: #dfa7ffcc;
+
+            }
+
+            100% {
+                box-shadow: 0 0 2vw rgba(161, 66, 250, 0.6);
+                background-color: rgba(136, 66, 250, 0.6);
+                border-radius: 10% 10%;
+
+            }
+        }
+
+        @keyframes star5bg {
+            0% {
+                box-shadow: 0 0 2.5vw #d8b800e8;
+
+
+                background-color: #bda000;
+                border-radius: 10% 10%;
+            }
+
+            50% {
+                box-shadow: 0 0 2.5vw #fce14d;
+                /* background-color: #ffd900cb; */
+
+                background-color: #ffd900e5;
+
+                border-radius: 10% 10%;
+            }
+
+            100% {
+                box-shadow: 0 0 2.5vw #d8b800e8;
+
+
+                background-color: #bda000;
+                border-radius: 10% 10%;
+            }
+        }
+
+        @keyframes star5light {
+            0% {
+                box-shadow: 0 0 1.5vw 0.1vw #9c9a79;
+                border-radius: 10% 10%;
+                background-color: #9e9a83;
+
+            }
+
+            33% {
+                box-shadow: 0 0 2vw 0.5vw #fffd9e;
+                border-radius: 10% 10%;
+                background-color: #ffff7b;
+
+            }
+
+            66% {
+                box-shadow: 0 0 2vw 0.5vw #fffd9e;
+                border-radius: 10% 10%;
+                background-color: #ffff7b;
+
+            }
+
+            100% {
+                box-shadow: 0 0 2.5vw #d8b800e8;
+                border-radius: 10% 10%;
+                background-color: #bda000;
+
+            }
+        }
+
+        .star5 {
+            animation: star5light 1.8s, star5bg 2s 1.8s infinite reverse;
+        }
+
+        .star4 {
+            animation: star4light 1.8s, star4bg 2s 1.8s infinite reverse;
+        }
+
+        .star51 {
+            /* box-shadow: 0 0 2.5vw #ff8800e5; */
+
+            box-shadow: 0 0 2.5vw #d8b800e8;
+
+
+            background-color: #bda000;
+            border-radius: 10% 10%;
+        }
+
+        .star52 {
+            box-shadow: 0 0 2.5vw #fce14d;
+            /* background-color: #ffd900cb; */
+
+            background-color: #ffd900e5;
+
+            border-radius: 10% 10%;
+        }
+
+
+
+
+        /* ！！！！！！！！！！信息界面！！！！！！！！！！！！！ */
+        .recordwrapper {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .torecord {
+            width: 9.01vw;
+            height: 2.29vw;
+            /* background-color: rgb(59, 216, 98); */
+            position: absolute;
+            top: 46.5vw;
+            left: 20vw;
+            z-index: 99;
+            background-image: url(https://i0.hdslb.com/bfs/album/8bb59bf9041df289334a93222d74050de5a8c874.png);
+            background-size: 100%;
+        }
+
+        .torecord:hover {
+            /* opacity: 0.8; */
+            background-image: url(https://i0.hdslb.com/bfs/album/be02aee311692f928962c20c59ca062595eb36f6.png);
+        }
+
+        .torecord:active {
+            background-image: url(https://i0.hdslb.com/bfs/album/973f1a009949e89092e48a770be52eb03f45d844.png);
+        }
+
+        .recordwrapper .recordinform {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #ebebeb;
+            overflow: auto;
+            color: #9f9f9f;
+        }
+
+        .recordwrapper .recordinform::-webkit-scrollbar {
+            display: none;
+        }
+
+        .recordwrapper .recordinform ul {
+            width: 50vw;
+            height: 33vw;
+            /* background-color: #fff; */
+            text-align: center;
+            line-height: 1.8vw;
+            font-size: 1.8vw;
+            position: absolute;
+            top: 12.375vw;
+            left: 0vw;
+            list-style: none;
+            overflow: auto;
+
+        }
+
+        .recordwrapper .recordinform ul li {
+            line-height: 1.7vw;
+            margin-bottom: 0.95vw;
+        }
+
+        .recordwrapper .recordinform ul::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* .recordwrapper .recordinform ul li:nth-child(2n){
+            background-color: #9f9f9f;
+            color: #ebebeb;
+        } */
+        .chouka {
+            width: 20vw;
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, 0);
+            font-size: 2vw;
+            top: 2.25vw;
+            text-align: center;
+            /* background-color: rgb(255, 59, 59); */
+            z-index: 9999;
+            color: #9f9f9f;
+
+        }
+
+        .zongjie {
+            height: 32vw;
+            width: 45vw;
+            font-size: 1.8vw;
+            position: absolute;
+            top: 15.5vw;
+            left: 45vw;
+            display: table-cell;
+            text-align: center;
+            /* background-color: #fff; */
+            overflow: auto;
+        }
+
+        .zongjie::-webkit-scrollbar {
+            display: none;
+        }
+
+        .back3 {
+            width: 3vw;
+            height: 3vw;
+            background-color: #ede4d8;
+            position: absolute;
+            top: 2vw;
+            right: 2vw;
+            z-index: 999;
+            border-radius: 50%;
+            border: solid 2px #aeb4be;
+            background-image: url(https://i0.hdslb.com/bfs/album/26bdb92b683b6fd90ddfbef4ecd562c0963349a7.png);
+            background-size: 65%;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+        }
+
+        .back3:hover {
+            background-color: #fcf3e7;
+            border: solid 2px #9ea3ac;
+            transition: all 0.2s;
+            transform: rotate(90deg);
+
+        }
+
+        body {
+            /* background-image: url(https://uploadstatic.mihoyo.com/contentweb/20201103/2020110317320323980.png); */
+            background-image: url(https://i0.hdslb.com/bfs/album/33af02d979a8f8b35efecf4234fe36cb53d0308c.jpg);
+
+            background-size: 100%;
+            background-repeat: no-repeat;
+        }
+
+        .hiden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper clearfix">
+        <div class="tipswrapper hiden">
+            <div class="tools hiden">
+                <div class="toolstxt">
+                    <div class="notipstxt">不再提醒</div>
+                    <div class="novoicetxt">关闭声音</div>
+                    <div class="cleartxt">清除历史</div>
+                </div>
+                <div class="toolsinform">
+                    <div class="notipstxt">勾选后不再自动弹出此提示。您可以通过点击派蒙头像再次打开此页面。</div>
+                    <div class="novoicetxt">勾选后网页将被静音。</div>
+                    <div class="cleartxt">历史记录占用的内存很小！点击确定后将永久清除您的本地抽卡数据！<br>（包括总抽数，累计抽数，UP角色选择，保底，出货顺序等）</div>
+                </div>
+                <div class="notips">
+                    <input type="checkbox" value="1" id="checkboxOneInput1" name="" />
+                    <label for="checkboxOneInput1"></label>
+                </div>
+                <div class="novoice">
+                    <input type="checkbox" value="1" id="checkboxOneInput2" name="" />
+                    <label for="checkboxOneInput2"></label>
+                </div>
+                <button class="btn03">clean</button>
+                <div class="quedinwrapper hiden">
+                    <div class="quedin">确认要删除历史记录吗
+                        <button class="quxiao">取 消</button>
+                        <button class="btn04">确 定</button>
+                    </div>
+                </div>
+            </div>
+            <div class="towrapper">
+                <div class="jieshao1">抽卡模拟器介绍</div>
+                <div class="jieshao2 hiden">设置</div>
+                <div class="back4"></div>
+                <div class="totips toactive"></div>
+                <div class="totools"></div>
+            </div>
+            <div class="tips">
+                <div class="tipsimg">
+                    <div class="img1"></div>
+                    <div class="img2 hiden"></div>
+                    <div class="img3 hiden"></div>
+                </div>
+                <div class="to clearfix">
+                    <div class="toleft hiden">.</div>
+                    <div class="toright">.</div>
+                </div>
+                <div class="opswrapper clearfix">
+                    <div class="ops1 ops opactive"></div>
+                    <div class="ops2 ops"></div>
+                    <div class="ops3 ops"></div>
+                </div>
+                <div class="tips1 tipstxt"><span>首 页</span><br>点击深渊图标修改UP角色，点击祈愿图标进行抽卡模拟。<br>点击派蒙可进入此界面。
+                </div>
+                <div class="tips2 tipstxt hiden"><span>深
+                        渊</span><br>点击角色头像可选择UP的五星与4星角色，<br>选择4名想要的角色后退出，将自动保存选人信息。</div>
+                <div class="tips3 tipstxt hiden"><span>祈
+                        愿</span><br>点击十连或单抽来进行抽卡模拟！<br>您可以在历史中看到详细的抽卡记录，所有的记录都将一直保存。<br>（包括总抽数，累计抽数，UP角色选择，保底，出货顺序等）
+                </div>
+            </div>
+        </div>
+
+
+
+        <div class="index">
+            <div class="totipswrapper"></div>
+
+            <div class="toshow"></div>
+            <div class="tochoose"></div>
+            <!-- <img src="https://i0.hdslb.com/bfs/album/362a9ad56a7158c60409effc1eaf278078236087.jpg" alt=""> -->
+        </div>
+
+        <div class="choosewrapper hiden">
+            <div class="name">
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+            </div>
+            <div class="choose">
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="wuxing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+                <div class="sixing"></div>
+            </div>
+            <div class="back1"></div>
+        </div>
+
+        <div class="showwrapper clearfix hiden">
+            <div class="zhanshi">
+
+            </div>
+            <div class="donghua hiden">
+                <video width="100%" id="shipin" class="hiden" muted="muted">
+                    <source src="./紫3-9.mp4">
+                </video>
+                <div class="tiaoguo"></div>
+                <span class="tiaoguowenzi">跳 过</span>
+            </div>
+
+            <div class="cardwrapper hiden clearfix">
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+                <div class=""><img class="" src="" alt="">
+                </div>
+            </div>
+
+            <div class="back2"></div>
+            <div class="torecord"></div>
+            <!-- <button class="btn01">danchou</button> -->
+            <div class="btn01"></div>
+            <!-- <button class="btn02">shilian</button> -->
+            <div class="btn02"></div>
+        </div>
+        <div class="recordwrapper hiden">
+            <div class="chouka">抽卡总结</div>
+            <div class="recordinform">
+
+                <ul>
+                    <li></li>
+                </ul>
+                <div class="zongjie">
+                    出货顺序:
+                    <div class="showcard">
+
+                    </div>
+                    <br>
+                    共抽:
+                    <span class="cardsum">0</span>
+                    发
+                    累计
+                    <span class="leiji">0</span>
+                    发未出金
+                    <br>
+                    出金数:
+                    <span class="jinsum">0</span>
+                    概率:
+                    <span class="jingaiall">0%</span>
+                    平均
+                    <span class="jinshu">0</span>
+                    抽出金
+                    <br>
+
+                    出紫数:
+                    <span class="zisum">0</span>
+                    概率:
+                    <span class="zigaiall">0%</span>
+                    平均
+                    <span class="zishu">0</span>
+                    抽出紫
+
+                </div>
+            </div>
+            <div class="back3"></div>
+        </div>
+    </div>
+
+</body>
+
+</html>
